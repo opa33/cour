@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { Button, Card, NumberInput, StatCard } from "../components";
 import { calculateShift, type CalculationParams } from "../utils/calculations";
 import { useUserStore, useShiftsStore } from "../store";
@@ -10,6 +10,7 @@ export default function ShiftCalculator() {
     updateCurrentShift,
     saveCurrentShift,
     resetCurrentShift,
+    shifts,
   } = useShiftsStore();
 
   const [calculationResult, setCalculationResult] = useState<ReturnType<
@@ -18,7 +19,15 @@ export default function ShiftCalculator() {
   const [showResult, setShowResult] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
-  // Initialize on mount
+  // Check if we're editing based on currentShift date matching existing shift
+  const isEditMode = useMemo(() => {
+    if (currentShift) {
+      return shifts.some((s: any) => s.date === currentShift.date);
+    }
+    return false;
+  }, [currentShift, shifts]);
+
+  // Initialize on mount and check if editing from URL/prop
   useEffect(() => {
     if (!currentShift) {
       resetCurrentShift();
@@ -73,7 +82,7 @@ export default function ShiftCalculator() {
       saveCurrentShift();
       // Show success feedback
       setTimeout(() => {
-        alert("✅ Смена сохранена!");
+        alert(isEditMode ? "✅ Смена обновлена!" : "✅ Смена сохранена!");
         resetCurrentShift();
         setShowResult(false);
         setCalculationResult(null);
@@ -83,6 +92,12 @@ export default function ShiftCalculator() {
       console.error("Failed to save shift:", error);
       setIsSaving(false);
     }
+  };
+
+  const handleCancel = () => {
+    resetCurrentShift();
+    setShowResult(false);
+    setCalculationResult(null);
   };
 
   if (!currentShift) {
@@ -95,7 +110,9 @@ export default function ShiftCalculator() {
         {/* Header */}
         <div className="mb-6">
           <h1 className="text-stone-700 text-2xl font-semibold mt-1">
-            Расчёт заработка за смену
+            {isEditMode
+              ? "✏️ Редактирование смены"
+              : "Расчёт заработка за смену"}
           </h1>
         </div>
 
@@ -243,8 +260,20 @@ export default function ShiftCalculator() {
               variant="success"
               className="w-full mt-6"
             >
-              💾 Сохранить
+              {isEditMode ? "💾 Обновить" : "💾 Сохранить"}
             </Button>
+
+            {/* Cancel Button for edit mode */}
+            {isEditMode && (
+              <Button
+                onClick={handleCancel}
+                size="lg"
+                variant="outline"
+                className="w-full mt-2"
+              >
+                ❌ Отмена
+              </Button>
+            )}
           </Card>
         )}
 

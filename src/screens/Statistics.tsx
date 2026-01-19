@@ -4,6 +4,7 @@ import { formatDate, formatCurrency } from "../utils/formatting";
 import Card from "../components/Card";
 import StatCard from "../components/StatCard";
 import Calendar from "../components/Calendar";
+import Button from "../components/Button";
 
 // Lazy load charts to reduce initial bundle size
 const ChartsContainer = lazy(() =>
@@ -16,7 +17,23 @@ type PeriodType = "day" | "week" | "month" | "custom";
 
 export default function Statistics() {
   const shifts = useShiftsStore((state: any) => state.shifts);
+  const { updateCurrentShift, deleteShift } = useShiftsStore();
   const currency = useUserStore((state: any) => state.settings.currency);
+  const fuelTrackingEnabled = useUserStore(
+    (state: any) => state.settings.fuelTrackingEnabled,
+  );
+
+  // State management
+  const [periodType, setPeriodType] = useState<PeriodType>("day");
+  const [selectedDate, setSelectedDate] = useState(
+    new Date().toISOString().split("T")[0],
+  );
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+  const [actionModalOpen, setActionModalOpen] = useState(false);
+  const [selectedShiftForAction, setSelectedShiftForAction] = useState<
+    string | null
+  >(null);
 
   const today = new Date().toISOString().split("T")[0];
   const monthAgo = (() => {
@@ -24,11 +41,6 @@ export default function Statistics() {
     d.setDate(d.getDate() - 30);
     return d.toISOString().split("T")[0];
   })();
-
-  const [periodType, setPeriodType] = useState<PeriodType>("month");
-  const [selectedDate, setSelectedDate] = useState<string>(today);
-  const [startDate, setStartDate] = useState<string>(monthAgo);
-  const [endDate, setEndDate] = useState<string>(today);
 
   // Get period dates
   const getPeriodDates = useMemo(() => {
@@ -75,6 +87,10 @@ export default function Statistics() {
   const totalIncome = useMemo(
     () =>
       periodShifts.reduce((sum: number, s: any) => sum + s.totalWithoutTax, 0),
+    [periodShifts],
+  );
+  const totalIncomeWithTax = useMemo(
+    () => periodShifts.reduce((sum: number, s: any) => sum + s.totalWithTax, 0),
     [periodShifts],
   );
   const totalWithFuel = useMemo(
@@ -126,6 +142,34 @@ export default function Statistics() {
       }, {}),
     [shifts],
   );
+
+  // Action handlers
+  const handleEditShift = (date: string) => {
+    const shiftToEdit = shifts.find((s: any) => s.date === date);
+    if (shiftToEdit) {
+      updateCurrentShift(shiftToEdit);
+      setActionModalOpen(false);
+      setSelectedShiftForAction(null);
+      // Note: In a real app, you'd navigate to ShiftCalculator screen
+      alert(
+        "ℹ️ Смена загружена. Перейдите на экран 'Расчёт' для редактирования.",
+      );
+    }
+  };
+
+  const handleDeleteShift = (date: string) => {
+    if (window.confirm(`❓ Удалить смену от ${formatDate(date)}?`)) {
+      deleteShift(date);
+      setActionModalOpen(false);
+      setSelectedShiftForAction(null);
+      alert("✅ Смена удалена!");
+    }
+  };
+
+  const handleShiftClick = (date: string) => {
+    setSelectedShiftForAction(date);
+    setActionModalOpen(true);
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 p-4 pb-24">
@@ -212,19 +256,28 @@ export default function Statistics() {
         {/* Summary Stats */}
         <div className="space-y-3 mb-4">
           <StatCard
-            label="Всего заработано"
+            label="Общий доход (с налогом)"
+            value={totalIncomeWithTax}
+            unit={currency}
+            color="blue"
+            icon="📊"
+          />
+          <StatCard
+            label="Доход (без налога)"
             value={totalIncome}
             unit={currency}
             color="green"
             icon="💰"
           />
-          <StatCard
-            label="Чистая прибыль"
-            value={totalWithFuel}
-            unit={currency}
-            color={totalWithFuel > 0 ? "green" : "red"}
-            icon={totalWithFuel > 0 ? "✅" : "⚠️"}
-          />
+          {fuelTrackingEnabled && (
+            <StatCard
+              label="Доход минус бензин"
+              value={totalWithFuel}
+              unit={currency}
+              color={totalWithFuel > 0 ? "green" : "red"}
+              icon={totalWithFuel > 0 ? "✅" : "⚠️"}
+            />
+          )}
           <StatCard
             label="Средний доход"
             value={avgEarning}
@@ -287,7 +340,8 @@ export default function Statistics() {
               {periodShifts.map((shift: any) => (
                 <div
                   key={shift.date}
-                  className="p-3 bg-gray-50 rounded border border-gray-200 hover:border-blue-300 cursor-pointer transition-colors"
+                  onClick={() => handleShiftClick(shift.date)}
+                  className="p-3 bg-gray-50 rounded border border-gray-200 hover:border-blue-400 cursor-pointer transition-all hover:shadow-md"
                 >
                   <div className="flex justify-between items-start mb-2">
                     <span className="font-semibold text-gray-800">
@@ -318,6 +372,45 @@ export default function Statistics() {
           <Card variant="elevated" className="text-center py-8 text-gray-600">
             <p>Нет смен за выбранный период</p>
           </Card>
+        )}
+
+        {/* Action Modal */}
+        {actionModalOpen && selectedShiftForAction && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-end z-50">
+            <div className="w-full bg-white rounded-t-2xl p-6 space-y-3 animate-slide-up">
+              <h2 className="text-lg font-bold text-gray-800 mb-4">
+                Смена от {formatDate(selectedShiftForAction)}
+              </h2>
+
+              <Button
+                onClick={() => handleEditShift(selectedShiftForAction)}
+                className="w-full bg-blue-500 text-white"
+                size="lg"
+              >
+                ✏️ Редактировать
+              </Button>
+
+              <Button
+                onClick={() => handleDeleteShift(selectedShiftForAction)}
+                className="w-full bg-red-500 text-white"
+                size="lg"
+              >
+                🗑️ Удалить
+              </Button>
+
+              <Button
+                onClick={() => {
+                  setActionModalOpen(false);
+                  setSelectedShiftForAction(null);
+                }}
+                variant="outline"
+                className="w-full"
+                size="lg"
+              >
+                ❌ Закрыть
+              </Button>
+            </div>
+          </div>
         )}
       </div>
     </div>

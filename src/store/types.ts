@@ -11,6 +11,7 @@ export interface UserSettings {
 }
 
 export interface ShiftRecord {
+  id?: string; // UUID for Supabase
   date: string;
   minutes: number;
   zone1: number;
@@ -25,6 +26,6 @@ export interface ShiftRecord {
   netProfit: number;
 }
 
-export interface CurrentShift extends Omit<ShiftRecord, "date"> {
+export interface CurrentShift extends ShiftRecord {
   date: string;
 }

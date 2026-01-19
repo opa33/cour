@@ -5,12 +5,13 @@ import { getTodayDate } from "../utils";
 interface ShiftsStore {
   shifts: ShiftRecord[];
   currentShift: CurrentShift | null;
+  isInitialized: boolean;
   startNewShift: () => void;
   updateCurrentShift: (partial: Partial<CurrentShift>) => void;
   saveCurrentShift: () => void;
   resetCurrentShift: () => void;
-  loadShifts: () => void;
-  saveShifts: () => void;
+  setShifts: (shifts: ShiftRecord[]) => void;
+  setInitialized: (value: boolean) => void;
   deleteShift: (date: string) => void;
   getShiftByDate: (date: string) => ShiftRecord | undefined;
   getShiftsByPeriod: (startDate: string, endDate: string) => ShiftRecord[];
@@ -18,6 +19,7 @@ interface ShiftsStore {
 }
 
 const EMPTY_SHIFT = (): CurrentShift => ({
+  id: crypto.randomUUID(),
   date: getTodayDate(),
   minutes: 0,
   zone1: 0,
@@ -35,6 +37,7 @@ const EMPTY_SHIFT = (): CurrentShift => ({
 export const useShiftsStore = create<ShiftsStore>((set: any, get: any) => ({
   shifts: [],
   currentShift: EMPTY_SHIFT(),
+  isInitialized: false,
 
   startNewShift: () => {
     set({ currentShift: EMPTY_SHIFT() });
@@ -65,34 +68,18 @@ export const useShiftsStore = create<ShiftsStore>((set: any, get: any) => ({
     }
 
     set({ shifts: newShifts });
-    setTimeout(() => get().saveShifts(), 0);
   },
 
   resetCurrentShift: () => {
     set({ currentShift: EMPTY_SHIFT() });
   },
 
-  loadShifts: () => {
-    try {
-      const stored = localStorage.getItem("courier-finance:shifts");
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        set({ shifts: parsed });
-      }
-    } catch (error) {
-      console.error("Failed to load shifts:", error);
-    }
+  setShifts: (shifts: ShiftRecord[]) => {
+    set({ shifts });
   },
 
-  saveShifts: () => {
-    try {
-      localStorage.setItem(
-        "courier-finance:shifts",
-        JSON.stringify(get().shifts),
-      );
-    } catch (error) {
-      console.error("Failed to save shifts:", error);
-    }
+  setInitialized: (value: boolean) => {
+    set({ isInitialized: value });
   },
 
   deleteShift: (date: string) => {

@@ -10,7 +10,7 @@ import {
   useUserSettingsSync,
   useLoadUserSettingsFromSupabase,
 } from "./utils/useUserSettingsSync";
-import { syncAllShifts, isSupabaseConfigured } from "./utils/supabase";
+import { initTelegram } from "./utils/telegram";
 
 type TabId = "calculator" | "statistics" | "leaderboard" | "profile";
 
@@ -21,76 +21,15 @@ const tabs = [
   { id: "profile", label: "Профиль", icon: "⚙️" },
 ];
 
-// Demo data for testing
-const DEMO_SHIFTS = [
-  {
-    date: "2026-01-15",
-    minutes: 480,
-    zone1: 5,
-    zone2: 3,
-    zone3: 2,
-    kilometers: 82,
-    fuelCost: 1000,
-    totalWithTax: 3500,
-    totalWithoutTax: 3045,
-    netProfit: 2045,
-  },
-  {
-    date: "2026-01-16",
-    minutes: 540,
-    zone1: 7,
-    zone2: 4,
-    zone3: 1,
-    kilometers: 95,
-    fuelCost: 1100,
-    totalWithTax: 4200,
-    totalWithoutTax: 3656,
-    netProfit: 2556,
-  },
-  {
-    date: "2026-01-17",
-    minutes: 420,
-    zone1: 4,
-    zone2: 2,
-    zone3: 3,
-    kilometers: 68,
-    fuelCost: 900,
-    totalWithTax: 2800,
-    totalWithoutTax: 2436,
-    netProfit: 1536,
-  },
-  {
-    date: "2026-01-18",
-    minutes: 600,
-    zone1: 8,
-    zone2: 5,
-    zone3: 2,
-    kilometers: 110,
-    fuelCost: 1300,
-    totalWithTax: 5000,
-    totalWithoutTax: 4350,
-    netProfit: 3050,
-  },
-  {
-    date: "2026-01-19",
-    minutes: 480,
-    zone1: 6,
-    zone2: 3,
-    zone3: 1,
-    kilometers: 80,
-    fuelCost: 950,
-    totalWithTax: 3600,
-    totalWithoutTax: 3132,
-    netProfit: 2182,
-  },
-];
-
 export default function App() {
   const [activeTab, setActiveTab] = useState<TabId>("calculator");
-  const loadShifts = useShiftsStore((state: any) => state.loadShifts);
+  const [isInitialized, setIsInitialized] = useState(false);
   const startNewShift = useShiftsStore((state: any) => state.startNewShift);
+  const setShiftsInitialized = useShiftsStore(
+    (state: any) => state.setInitialized,
+  );
 
-  // Load from Supabase (or localStorage fallback)
+  // Load from Supabase
   const loadShiftsFromSupabase = useLoadShiftsFromSupabase();
   const loadUserSettingsFromSupabase = useLoadUserSettingsFromSupabase();
 
@@ -100,39 +39,32 @@ export default function App() {
 
   // Initialize app on mount
   useEffect(() => {
-    // Initialize demo data if no shifts exist
-    const isDemoDataInit = !localStorage.getItem("courier-finance:shifts");
-    if (isDemoDataInit) {
-      console.log("📝 Loading demo data...");
-      localStorage.setItem(
-        "courier-finance:shifts",
-        JSON.stringify(DEMO_SHIFTS),
-      );
-      loadShifts();
-
-      // Immediately sync demo data to Supabase
-      if (isSupabaseConfigured()) {
-        console.log("🔄 Syncing demo data to Supabase...");
-        setTimeout(() => {
-          syncAllShifts(DEMO_SHIFTS);
-        }, 1000);
-      }
-    } else {
-      loadShifts();
-    }
-
-    startNewShift();
-
-    // Try to load from Supabase in background (non-blocking)
-    setTimeout(() => {
+    const initialize = async () => {
       try {
-        console.log("📥 Attempting to load from Supabase...");
-        loadUserSettingsFromSupabase();
-        loadShiftsFromSupabase();
+        // Initialize Telegram WebApp
+        const webApp = initTelegram();
+        if (webApp) {
+          console.log("✅ Telegram WebApp initialized");
+        } else {
+          console.warn("⚠️ Telegram WebApp not available (development mode)");
+        }
+
+        console.log("📥 Loading from Supabase...");
+        await loadUserSettingsFromSupabase();
+        await loadShiftsFromSupabase();
+
+        // Mark as initialized so sync can start
+        setShiftsInitialized(true);
       } catch (error) {
-        console.error("❌ Supabase load failed, using localStorage:", error);
+        console.error("❌ Initialization failed:", error);
+        setShiftsInitialized(true);
       }
-    }, 500);
+
+      startNewShift();
+      setIsInitialized(true);
+    };
+
+    initialize();
 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -151,6 +83,22 @@ export default function App() {
         return <ShiftCalculator />;
     }
   };
+
+  // Wait for initialization before rendering
+  if (!isInitialized) {
+    return (
+      <div className="w-full h-full flex items-center justify-center bg-gray-50">
+        <div className="text-center p-6 max-w-sm">
+          <div className="text-4xl mb-4">⏳</div>
+          <p className="text-gray-600 mb-4">Загрузка...</p>
+          <div className="text-sm text-gray-500 space-y-2">
+            <p>📱 Приложение требует Telegram для авторизации</p>
+            <p>Убедитесь, что используете его в Telegram Mini App</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full h-full">

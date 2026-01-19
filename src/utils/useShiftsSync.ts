@@ -13,13 +13,14 @@ import {
  */
 export const useShiftsSync = () => {
   const shifts = useShiftsStore((state: any) => state.shifts);
+  const isInitialized = useShiftsStore((state: any) => state.isInitialized);
   const syncTimeoutRef = useRef<ReturnType<typeof setTimeout>>(
     undefined as any,
   );
 
   useEffect(() => {
     if (!isSupabaseConfigured()) {
-      console.log("📍 Supabase not configured, using localStorage only");
+      console.log("📍 Supabase not configured, using data only");
       return;
     }
 
@@ -37,6 +38,7 @@ export const useShiftsSync = () => {
 
   useEffect(() => {
     if (!isSupabaseConfigured()) return;
+    if (!isInitialized) return; // Don't sync until data is loaded
     if (shifts.length === 0) return;
 
     // Debounce sync to avoid too many requests
@@ -59,19 +61,18 @@ export const useShiftsSync = () => {
         clearTimeout(syncTimeoutRef.current);
       }
     };
-  }, [shifts]);
+  }, [shifts, isInitialized]);
 };
 
 /**
  * Hook for loading shifts from Supabase
  */
 export const useLoadShiftsFromSupabase = () => {
-  const loadShifts = useShiftsStore((state: any) => state.loadShifts);
+  const setShifts = useShiftsStore((state: any) => state.setShifts);
 
   const loadFromSupabase = async () => {
     if (!isSupabaseConfigured()) {
-      console.log("📍 Supabase not configured, using localStorage only");
-      loadShifts();
+      console.log("📍 Supabase not configured");
       return;
     }
 
@@ -86,19 +87,13 @@ export const useLoadShiftsFromSupabase = () => {
       const shifts = await getShiftsInRange(startDate, endDate);
 
       if (shifts.length > 0) {
-        // Update localStorage with Supabase data
-        localStorage.setItem("courier-finance:shifts", JSON.stringify(shifts));
-        loadShifts();
+        setShifts(shifts);
         console.log(`✅ Loaded ${shifts.length} shifts from Supabase`);
       } else {
-        // Fall back to localStorage if no shifts in Supabase
-        console.log("📍 No shifts in Supabase, using localStorage");
-        loadShifts();
+        console.log("📍 No shifts in Supabase");
       }
     } catch (error) {
       console.error("❌ Failed to load shifts from Supabase:", error);
-      console.log("📍 Falling back to localStorage");
-      loadShifts(); // Fall back to localStorage
     }
   };
 

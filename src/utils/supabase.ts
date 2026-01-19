@@ -1,4 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
+import { getUserId } from "./telegram";
 // TODO: Generate types with: npx supabase gen types typescript --project-id your-id > src/utils/database.types.ts
 // For now, using any type
 // import type { Database } from "./database.types";
@@ -43,20 +44,15 @@ const retryAsync = async <T>(
 };
 
 /**
- * Get current user ID from Telegram WebApp or localStorage
+ * Get current user ID from Telegram WebApp
  */
 export const getCurrentUserId = (): string => {
-  // In production: use Telegram WebApp ID
-  // const user = window.Telegram?.WebApp?.initData?.user?.id;
-  // if (user) return String(user);
-
-  // For now: use localStorage ID (generate if needed)
-  let userId = localStorage.getItem("courier-finance:user-id");
-  if (!userId) {
-    userId = `dev-${Date.now()}`;
-    localStorage.setItem("courier-finance:user-id", userId);
+  const userId = getUserId();
+  if (userId) {
+    console.log("👤 User ID:", userId);
+    return userId;
   }
-  return userId;
+  throw new Error("❌ Unable to get user ID from Telegram");
 };
 
 /**
@@ -142,6 +138,7 @@ export const syncAllShifts = async (shifts: any[]) => {
   try {
     const result = await retryAsync(async () => {
       const shiftsToSync = shifts.map((shift) => ({
+        id: shift.id || crypto.randomUUID(), // Generate UUID if not exists
         telegram_id: userId,
         date: shift.date,
         ...shift,

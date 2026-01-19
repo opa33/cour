@@ -14,12 +14,32 @@ export const initTelegram = () => {
  * Get current user Telegram ID (auto-auth)
  */
 export const getUserId = (): string | null => {
-  const webApp = initTelegram();
-  if (webApp?.initDataUnsafe?.user?.id) {
-    return String(webApp.initDataUnsafe.user.id);
+  const w = window as any;
+
+  // Try initDataUnsafe first (more reliable for development)
+  if (w.Telegram?.WebApp?.initDataUnsafe?.user?.id) {
+    const id = String(w.Telegram.WebApp.initDataUnsafe.user.id);
+    return id;
   }
-  // Fallback for development
-  return "dev-" + Math.random().toString(36).substr(2, 9);
+
+  // Fallback to initData if available
+  if (w.Telegram?.WebApp?.initData) {
+    // Parse initData to extract user ID
+    try {
+      const params = new URLSearchParams(w.Telegram.WebApp.initData);
+      const userData = params.get("user");
+      if (userData) {
+        const user = JSON.parse(userData);
+        if (user.id) {
+          return String(user.id);
+        }
+      }
+    } catch (error) {
+      console.error("Failed to parse Telegram initData:", error);
+    }
+  }
+
+  return null;
 };
 
 /**

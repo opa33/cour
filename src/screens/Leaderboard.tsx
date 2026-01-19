@@ -26,33 +26,13 @@ export default function Leaderboard() {
   );
 
   // Mock data for other couriers (fallback when Supabase disabled)
-  const mockCouriers = [
-    {
-      userId: "user-2",
-      username: "Иван",
-      avatar: "👨",
-    },
-    {
-      userId: "user-3",
-      username: "Петр",
-      avatar: "👨",
-    },
-    {
-      userId: "user-4",
-      username: "Елена",
-      avatar: "👩",
-    },
-    {
-      userId: "user-5",
-      username: "Мария",
-      avatar: "👩",
-    },
-  ];
+  // REMOVED: Only use real data from Supabase now
+  // const mockCouriers = [...];
 
   // Get current user data
   const currentUserId =
     localStorage.getItem("courier-finance:user-id") || "dev";
-  const currentUsername = localStorage.getItem("currentUsername") || "Вы";
+  // const currentUsername = localStorage.getItem("currentUsername") || "Вы"; // Removed - not used
 
   // Calculate period earnings for current user
   const getPeriodEarnings = (): [string, string] => {
@@ -101,42 +81,8 @@ export default function Leaderboard() {
   }, [shifts, pStart, pEnd]);
 
   // Generate mock earnings for other couriers (varied amounts)
-  const generateMockLeaderboard = (): void => {
-    const entries: LeaderboardEntry[] = [];
-
-    // Add current user if opted in
-    if (leaderboardOptIn) {
-      entries.push({
-        rank: 0,
-        userId: currentUserId,
-        username: currentUsername,
-        earnings: currentUserEarnings,
-      });
-    }
-
-    // Add mock couriers with random earnings (±30% from current user)
-    mockCouriers.forEach((courier) => {
-      const variance = (Math.random() - 0.5) * 0.6; // ±30%
-      const baseEarnings = currentUserEarnings * (1 + variance);
-      entries.push({
-        rank: 0,
-        userId: courier.userId,
-        username: courier.username,
-        earnings: Math.max(0, Math.round(baseEarnings)),
-      });
-    });
-
-    // Sort by earnings descending
-    entries.sort((a, b) => b.earnings - a.earnings);
-
-    // Add ranks
-    setLeaderboardData(
-      entries.map((entry, index) => ({
-        ...entry,
-        rank: index + 1,
-      })),
-    );
-  };
+  // REMOVED: No longer generating mock data, using only Supabase data
+  // const generateMockLeaderboard = (): void => { ... };
 
   // Load leaderboard data from Supabase
   useEffect(() => {
@@ -158,16 +104,17 @@ export default function Leaderboard() {
           }
         }
 
-        // Fallback to mock data
-        generateMockLeaderboard();
+        // No data available - show empty leaderboard
+        console.log("⚠️ No leaderboard data available from Supabase");
+        setLeaderboardData([]);
       } catch (error) {
         console.error("Failed to load leaderboard:", error);
-        generateMockLeaderboard();
+        setLeaderboardData([]);
       }
     };
 
     loadLeaderboard();
-  }, [pStart, pEnd, generateMockLeaderboard]);
+  }, [pStart, pEnd]);
 
   const topCouriers = leaderboardData.slice(0, 5);
 

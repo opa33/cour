@@ -46,13 +46,11 @@ export const useUserSettingsSync = () => {
  * Hook for loading user settings from Supabase
  */
 export const useLoadUserSettingsFromSupabase = () => {
-  const loadSettings = useUserStore((state: any) => state.loadSettings);
   const updateSettings = useUserStore((state: any) => state.updateSettings);
 
   const loadFromSupabase = async () => {
     if (!isSupabaseConfigured()) {
-      console.log("📍 Supabase not configured, using localStorage only");
-      loadSettings();
+      console.log("📍 Supabase not configured");
       return;
     }
 
@@ -64,14 +62,10 @@ export const useLoadUserSettingsFromSupabase = () => {
         updateSettings(supabaseSettings);
         console.log("✅ Loaded user settings from Supabase");
       } else {
-        // Fall back to localStorage
-        console.log("📍 No settings in Supabase, using localStorage");
-        loadSettings();
+        console.log("📍 No settings in Supabase, using defaults");
       }
     } catch (error) {
       console.error("❌ Failed to load user settings from Supabase:", error);
-      console.log("📍 Falling back to localStorage");
-      loadSettings(); // Fall back to localStorage
     }
   };
 
