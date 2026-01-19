@@ -66,26 +66,36 @@ export const isSupabaseConfigured = (): boolean => {
  * Initialize user in database (called on first app launch)
  */
 export const initializeUser = async (username?: string) => {
-  if (!isSupabaseConfigured()) return null;
-
-  const userId = getCurrentUserId();
+  if (!isSupabaseConfigured()) {
+    console.warn("⚠️ Supabase not configured");
+    return null;
+  }
 
   try {
+    const userId = getCurrentUserId();
+    console.log("👤 Initializing user with ID:", userId);
+
     const result = await retryAsync(async () => {
+      const userData = {
+        telegram_id: userId,
+        username: username || `User_${userId.slice(0, 8)}`,
+        created_at: new Date().toISOString(),
+      };
+
+      console.log("📤 Sending user data:", userData);
+
       const { data, error } = await supabase
         .from("users")
-        .upsert(
-          {
-            telegram_id: userId,
-            username: username || `User_${userId.slice(0, 8)}`,
-            created_at: new Date().toISOString(),
-          },
-          { onConflict: "telegram_id" },
-        )
+        .upsert(userData, { onConflict: "telegram_id" })
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error("❌ Supabase error:", error);
+        throw error;
+      }
+
+      console.log("✅ User initialized:", data);
       return data;
     });
 
@@ -133,24 +143,32 @@ export const syncShift = async (shift: any) => {
 export const syncAllShifts = async (shifts: any[]) => {
   if (!isSupabaseConfigured()) return [];
 
-  const userId = getCurrentUserId();
-
   try {
+    const userId = getCurrentUserId();
+    console.log("🔄 Syncing shifts for user:", userId, "Count:", shifts.length);
+
     const result = await retryAsync(async () => {
       const shiftsToSync = shifts.map((shift) => ({
-        id: shift.id || crypto.randomUUID(), // Generate UUID if not exists
+        id: shift.id || crypto.randomUUID(),
         telegram_id: userId,
         date: shift.date,
         ...shift,
         updated_at: new Date().toISOString(),
       }));
 
+      console.log("📤 Sending shifts:", shiftsToSync.length);
+
       const { data, error } = await supabase
         .from("shifts")
         .upsert(shiftsToSync, { onConflict: "telegram_id,date" })
         .select();
 
-      if (error) throw error;
+      if (error) {
+        console.error("❌ Supabase error:", error);
+        throw error;
+      }
+
+      console.log("✅ Shifts synced:", data?.length || 0);
       return data || [];
     });
 
