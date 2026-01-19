@@ -27,7 +27,12 @@ export default function ShiftCalculator() {
 
   const handleInputChange = (field: string, value: string | number) => {
     updateCurrentShift({
-      [field]: typeof value === "string" ? parseInt(value) || 0 : value,
+      [field]:
+        field === "date"
+          ? value
+          : typeof value === "string"
+            ? parseInt(value) || 0
+            : value,
     });
   };
 
@@ -89,10 +94,9 @@ export default function ShiftCalculator() {
       <div className="max-w-md mx-auto">
         {/* Header */}
         <div className="mb-6">
-          <h1 className="text-3xl font-bold text-gray-800">Курьер Финанс</h1>
-          <p className="text-gray-600 text-sm mt-1">
+          <h1 className="text-stone-700 text-2xl font-semibold mt-1">
             Расчёт заработка за смену
-          </p>
+          </h1>
         </div>
 
         {/* Input Form Card */}
@@ -105,7 +109,11 @@ export default function ShiftCalculator() {
               </label>
               <input
                 type="date"
-                value={currentShift.date}
+                value={
+                  currentShift?.date?.match(/^\d{4}-\d{2}-\d{2}$/)
+                    ? currentShift.date
+                    : new Date().toISOString().split("T")[0]
+                }
                 onChange={(e) => handleInputChange("date", e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               />

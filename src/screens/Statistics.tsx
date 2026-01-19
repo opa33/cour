@@ -1,8 +1,7 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useShiftsStore, useUserStore } from "../store";
 import { formatDate, formatCurrency } from "../utils/formatting";
 import Card from "../components/Card";
-import Button from "../components/Button";
 import StatCard from "../components/StatCard";
 
 type PeriodType = "day" | "week" | "month" | "custom";
@@ -10,24 +9,30 @@ type PeriodType = "day" | "week" | "month" | "custom";
 export default function Statistics() {
   const shifts = useShiftsStore((state: any) => state.shifts);
   const currency = useUserStore((state: any) => state.settings.currency);
+
+  const today = new Date().toISOString().split("T")[0];
+  const monthAgo = (() => {
+    const d = new Date();
+    d.setDate(d.getDate() - 30);
+    return d.toISOString().split("T")[0];
+  })();
+
   const [periodType, setPeriodType] = useState<PeriodType>("month");
-  const [selectedDate, setSelectedDate] = useState<string>(
-    new Date().toISOString().split("T")[0],
-  );
-  const [startDate, setStartDate] = useState<string>("");
-  const [endDate, setEndDate] = useState<string>("");
+  const [selectedDate, setSelectedDate] = useState<string>(today);
+  const [startDate, setStartDate] = useState<string>(monthAgo);
+  const [endDate, setEndDate] = useState<string>(today);
 
   // Get period dates
-  const getPeriodDates = (): [string, string] => {
-    const today = new Date(selectedDate);
+  const getPeriodDates = useMemo(() => {
+    const d = new Date(selectedDate);
 
     switch (periodType) {
       case "day":
         return [selectedDate, selectedDate];
 
       case "week": {
-        const weekStart = new Date(today);
-        weekStart.setDate(today.getDate() - today.getDay());
+        const weekStart = new Date(d);
+        weekStart.setDate(d.getDate() - d.getDay());
         const weekEnd = new Date(weekStart);
         weekEnd.setDate(weekStart.getDate() + 6);
         return [
@@ -37,8 +42,8 @@ export default function Statistics() {
       }
 
       case "month": {
-        const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
-        const monthEnd = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+        const monthStart = new Date(d.getFullYear(), d.getMonth(), 1);
+        const monthEnd = new Date(d.getFullYear(), d.getMonth() + 1, 0);
         return [
           monthStart.toISOString().split("T")[0],
           monthEnd.toISOString().split("T")[0],
@@ -46,40 +51,51 @@ export default function Statistics() {
       }
 
       case "custom":
-        return [startDate, endDate];
+        return [startDate || monthAgo, endDate || today];
 
       default:
         return [selectedDate, selectedDate];
     }
-  };
+  }, [periodType, selectedDate, startDate, endDate, monthAgo, today]);
 
-  const [pStart, pEnd] = getPeriodDates();
-  const periodShifts = shifts.filter(
-    (s: any) => s.date >= pStart && s.date <= pEnd,
+  const [pStart, pEnd] = getPeriodDates;
+  const periodShifts = useMemo(
+    () => shifts.filter((s: any) => s.date >= pStart && s.date <= pEnd),
+    [shifts, pStart, pEnd],
   );
 
-  const totalIncome = periodShifts.reduce(
-    (sum: number, s: any) => sum + s.totalWithoutTax,
-    0,
+  const totalIncome = useMemo(
+    () =>
+      periodShifts.reduce((sum: number, s: any) => sum + s.totalWithoutTax, 0),
+    [periodShifts],
   );
-  const totalWithFuel = periodShifts.reduce(
-    (sum: number, s: any) => sum + s.netProfit,
-    0,
+  const totalWithFuel = useMemo(
+    () => periodShifts.reduce((sum: number, s: any) => sum + s.netProfit, 0),
+    [periodShifts],
   );
-  const totalKm = periodShifts.reduce(
-    (sum: number, s: any) => sum + s.kilometers,
-    0,
+  const totalKm = useMemo(
+    () => periodShifts.reduce((sum: number, s: any) => sum + s.kilometers, 0),
+    [periodShifts],
   );
-  const totalMinutes = periodShifts.reduce(
-    (sum: number, s: any) => sum + s.minutes,
-    0,
+  const totalMinutes = useMemo(
+    () => periodShifts.reduce((sum: number, s: any) => sum + s.minutes, 0),
+    [periodShifts],
   );
-  const totalOrders = periodShifts.reduce(
-    (sum: number, s: any) => sum + s.zone1 + s.zone2 + s.zone3,
-    0,
+  const totalOrders = useMemo(
+    () =>
+      periodShifts.reduce(
+        (sum: number, s: any) => sum + s.zone1 + s.zone2 + s.zone3,
+        0,
+      ),
+    [periodShifts],
   );
-  const avgEarning =
-    periodShifts.length > 0 ? Math.round(totalIncome / periodShifts.length) : 0;
+  const avgEarning = useMemo(
+    () =>
+      periodShifts.length > 0
+        ? Math.round(totalIncome / periodShifts.length)
+        : 0,
+    [periodShifts, totalIncome],
+  );
 
   return (
     <div className="min-h-screen bg-gray-50 p-4 pb-24">
@@ -97,69 +113,60 @@ export default function Statistics() {
         {/* Period Selector */}
         <Card variant="elevated" className="mb-4">
           <div className="grid grid-cols-4 gap-2">
-            <button
-              onClick={() => setPeriodType("day")}
-              className={`py-2 px-1 text-xs font-semibold rounded transition-colors ${
-                periodType === "day"
-                  ? "bg-blue-500 text-white"
-                  : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-              }`}
-            >
-              День
-            </button>
-            <button
-              onClick={() => setPeriodType("week")}
-              className={`py-2 px-1 text-xs font-semibold rounded transition-colors ${
-                periodType === "week"
-                  ? "bg-blue-500 text-white"
-                  : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-              }`}
-            >
-              Неделя
-            </button>
-            <button
-              onClick={() => setPeriodType("month")}
-              className={`py-2 px-1 text-xs font-semibold rounded transition-colors ${
-                periodType === "month"
-                  ? "bg-blue-500 text-white"
-                  : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-              }`}
-            >
-              Месяц
-            </button>
-            <button
-              onClick={() => setPeriodType("custom")}
-              className={`py-2 px-1 text-xs font-semibold rounded transition-colors ${
-                periodType === "custom"
-                  ? "bg-blue-500 text-white"
-                  : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-              }`}
-            >
-              Период
-            </button>
+            {(["day", "week", "month", "custom"] as PeriodType[]).map(
+              (period) => (
+                <button
+                  key={period}
+                  onClick={() => setPeriodType(period)}
+                  className={`py-2 px-1 text-xs font-semibold rounded transition-all duration-200 ${
+                    periodType === period
+                      ? "bg-blue-500 text-white shadow-md scale-105"
+                      : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                  }`}
+                >
+                  {period === "day"
+                    ? "День"
+                    : period === "week"
+                      ? "Неделя"
+                      : period === "month"
+                        ? "Месяц"
+                        : "Период"}
+                </button>
+              ),
+            )}
           </div>
         </Card>
 
         {/* Date Selector */}
         <Card variant="elevated" className="mb-4">
           <div className="space-y-2">
-            <label className="text-sm font-semibold text-gray-700 block">
-              {periodType === "custom" ? "Начало периода" : "Дата"}
-            </label>
-            <input
-              type="date"
-              value={periodType === "custom" ? startDate : selectedDate}
-              onChange={(e) =>
-                periodType === "custom"
-                  ? setStartDate(e.target.value)
-                  : setSelectedDate(e.target.value)
-              }
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
+            {periodType !== "custom" && (
+              <>
+                <label className="text-sm font-semibold text-gray-700 block">
+                  Выбрать дату
+                </label>
+                <input
+                  type="date"
+                  value={selectedDate}
+                  onChange={(e) => setSelectedDate(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </>
+            )}
 
             {periodType === "custom" && (
               <>
-                <label className="text-sm font-semibold text-gray-700 block mt-2">
+                <label className="text-sm font-semibold text-gray-700 block">
+                  Начало периода
+                </label>
+                <input
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+
+                <label className="text-sm font-semibold text-gray-700 block mt-3">
                   Конец периода
                 </label>
                 <input

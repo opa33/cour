@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { ShiftCalculator, Statistics } from "./screens";
+import { ShiftCalculator, Statistics, Profile, Leaderboard } from "./screens";
 import { useUserStore, useShiftsStore } from "./store";
 import Tabs from "./components/Tabs";
 
@@ -32,31 +32,9 @@ export default function App() {
       case "statistics":
         return <Statistics />;
       case "leaderboard":
-        return (
-          <div className="min-h-screen bg-gray-50 p-4 pb-24">
-            <div className="max-w-md mx-auto">
-              <h1 className="text-3xl font-bold text-gray-800 mb-4">
-                🏆 Рейтинг
-              </h1>
-              <div className="bg-white rounded-lg shadow-md p-8 text-center text-gray-600">
-                <p>Экран рейтинга (в разработке)</p>
-              </div>
-            </div>
-          </div>
-        );
+        return <Leaderboard />;
       case "profile":
-        return (
-          <div className="min-h-screen bg-gray-50 p-4 pb-24">
-            <div className="max-w-md mx-auto">
-              <h1 className="text-3xl font-bold text-gray-800 mb-4">
-                ⚙️ Профиль
-              </h1>
-              <div className="bg-white rounded-lg shadow-md p-8 text-center text-gray-600">
-                <p>Экран профиля (в разработке)</p>
-              </div>
-            </div>
-          </div>
-        );
+        return <Profile />;
       default:
         return <ShiftCalculator />;
     }
