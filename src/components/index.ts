@@ -5,3 +5,5 @@ export { default as Card } from "./Card";
 export { default as StatCard } from "./StatCard";
 export { default as Modal } from "./Modal";
 export { default as Tabs } from "./Tabs";
+export { default as Calendar } from "./Calendar";
+export { EarningsChart, KilometersChart } from "./Chart";

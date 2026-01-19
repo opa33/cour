@@ -1,8 +1,16 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, lazy, Suspense } from "react";
 import { useShiftsStore, useUserStore } from "../store";
 import { formatDate, formatCurrency } from "../utils/formatting";
 import Card from "../components/Card";
 import StatCard from "../components/StatCard";
+import Calendar from "../components/Calendar";
+
+// Lazy load charts to reduce initial bundle size
+const ChartsContainer = lazy(() =>
+  import("../components/ChartsContainer").then((m) => ({
+    default: m.ChartsContainer,
+  })),
+);
 
 type PeriodType = "day" | "week" | "month" | "custom";
 
@@ -97,6 +105,28 @@ export default function Statistics() {
     [periodShifts, totalIncome],
   );
 
+  // Prepare chart data
+  const chartData = useMemo(
+    () =>
+      periodShifts.map((s: any) => ({
+        date: s.date,
+        income: s.totalWithoutTax,
+        netProfit: s.netProfit,
+        kilometers: s.kilometers,
+      })),
+    [periodShifts],
+  );
+
+  // Prepare shifts by date map for calendar
+  const shiftsByDate = useMemo(
+    () =>
+      shifts.reduce((acc: Record<string, number>, s: any) => {
+        acc[s.date] = s.netProfit;
+        return acc;
+      }, {}),
+    [shifts],
+  );
+
   return (
     <div className="min-h-screen bg-gray-50 p-4 pb-24">
       <div className="max-w-md mx-auto">
@@ -137,48 +167,47 @@ export default function Statistics() {
           </div>
         </Card>
 
-        {/* Date Selector */}
-        <Card variant="elevated" className="mb-4">
-          <div className="space-y-2">
-            {periodType !== "custom" && (
-              <>
-                <label className="text-sm font-semibold text-gray-700 block">
-                  Выбрать дату
-                </label>
-                <input
-                  type="date"
-                  value={selectedDate}
-                  onChange={(e) => setSelectedDate(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </>
-            )}
+        {/* Calendar View */}
+        {periodType !== "custom" && (
+          <Card variant="elevated" className="mb-4">
+            <Calendar
+              shifts={shiftsByDate}
+              selectedDate={selectedDate}
+              onSelectDate={setSelectedDate}
+              maxValue={Math.max(
+                ...(Object.values(shiftsByDate) as number[]),
+                5000,
+              )}
+            />
+          </Card>
+        )}
 
-            {periodType === "custom" && (
-              <>
-                <label className="text-sm font-semibold text-gray-700 block">
-                  Начало периода
-                </label>
-                <input
-                  type="date"
-                  value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
+        {/* Custom Period Selector */}
+        {periodType === "custom" && (
+          <Card variant="elevated" className="mb-4">
+            <div className="space-y-2">
+              <label className="text-sm font-semibold text-gray-700 block">
+                Начало периода
+              </label>
+              <input
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
 
-                <label className="text-sm font-semibold text-gray-700 block mt-3">
-                  Конец периода
-                </label>
-                <input
-                  type="date"
-                  value={endDate}
-                  onChange={(e) => setEndDate(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </>
-            )}
-          </div>
-        </Card>
+              <label className="text-sm font-semibold text-gray-700 block mt-3">
+                Конец периода
+              </label>
+              <input
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+          </Card>
+        )}
 
         {/* Summary Stats */}
         <div className="space-y-3 mb-4">
@@ -204,6 +233,20 @@ export default function Statistics() {
             icon="📈"
           />
         </div>
+
+        {/* Charts */}
+        <Suspense
+          fallback={
+            <Card
+              variant="elevated"
+              className="mb-4 p-4 text-gray-600 text-center"
+            >
+              Загрузка графиков...
+            </Card>
+          }
+        >
+          <ChartsContainer data={chartData} />
+        </Suspense>
 
         {/* Details */}
         <Card variant="elevated" className="mb-4">
