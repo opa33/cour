@@ -1,7 +1,8 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Card, StatCard } from "../components";
 import { useShiftsStore, useUserStore } from "../store";
 import { formatCurrency } from "../utils/formatting";
+import { getLeaderboard, isSupabaseConfigured } from "../utils/supabase";
 
 type PeriodType = "day" | "week" | "month";
 
@@ -20,8 +21,11 @@ export default function Leaderboard() {
   );
 
   const [periodType, setPeriodType] = useState<PeriodType>("week");
+  const [leaderboardData, setLeaderboardData] = useState<LeaderboardEntry[]>(
+    [],
+  );
 
-  // Mock data for other couriers (in production will come from Supabase)
+  // Mock data for other couriers (fallback when Supabase disabled)
   const mockCouriers = [
     {
       userId: "user-2",
@@ -46,7 +50,8 @@ export default function Leaderboard() {
   ];
 
   // Get current user data
-  const currentUserId = "user-1";
+  const currentUserId =
+    localStorage.getItem("courier-finance:user-id") || "dev";
   const currentUsername = localStorage.getItem("currentUsername") || "Вы";
 
   // Calculate period earnings for current user
@@ -96,7 +101,7 @@ export default function Leaderboard() {
   }, [shifts, pStart, pEnd]);
 
   // Generate mock earnings for other couriers (varied amounts)
-  const generateMockLeaderboard = (): LeaderboardEntry[] => {
+  const generateMockLeaderboard = (): void => {
     const entries: LeaderboardEntry[] = [];
 
     // Add current user if opted in
@@ -125,14 +130,46 @@ export default function Leaderboard() {
     entries.sort((a, b) => b.earnings - a.earnings);
 
     // Add ranks
-    return entries.map((entry, index) => ({
-      ...entry,
-      rank: index + 1,
-    }));
+    setLeaderboardData(
+      entries.map((entry, index) => ({
+        ...entry,
+        rank: index + 1,
+      })),
+    );
   };
 
-  const leaderboard = generateMockLeaderboard();
-  const topCouriers = leaderboard.slice(0, 5);
+  // Load leaderboard data from Supabase
+  useEffect(() => {
+    const loadLeaderboard = async () => {
+      try {
+        if (isSupabaseConfigured()) {
+          // Load from Supabase
+          const data = await getLeaderboard(pStart, pEnd, 5);
+
+          if (data && data.length > 0) {
+            const entries = data.map((item: any) => ({
+              rank: item.rank,
+              userId: item.telegram_id,
+              username: item.username,
+              earnings: item.total_earnings,
+            }));
+            setLeaderboardData(entries);
+            return;
+          }
+        }
+
+        // Fallback to mock data
+        generateMockLeaderboard();
+      } catch (error) {
+        console.error("Failed to load leaderboard:", error);
+        generateMockLeaderboard();
+      }
+    };
+
+    loadLeaderboard();
+  }, [pStart, pEnd, generateMockLeaderboard]);
+
+  const topCouriers = leaderboardData.slice(0, 5);
 
   // Medal emojis for top 3
   const getMedal = (rank: number): string => {

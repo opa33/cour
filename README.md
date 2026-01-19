@@ -1,9 +1,174 @@
-# cour
+# cour - Courier Finance 📊
 
-ТЕХНИЧЕСКОЕ ЗАДАНИЕ И ROADMAP ПРОЕКТА
-Проект: Telegram Mini App «Courier Finance»
-Версия: 1.0
-Формат: продуктовый (startup-style)
+[![Phase 5](https://img.shields.io/badge/Phase-5%2F8-blue)](./STATUS.md)
+[![React 19](https://img.shields.io/badge/React-19.2-61dafb)](https://react.dev)
+[![Vite 7](https://img.shields.io/badge/Vite-7.3-646cff)](https://vitejs.dev)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.9-3178c6)](https://www.typescriptlang.org)
+[![Supabase](https://img.shields.io/badge/Supabase-Ready-3fcf8e)](https://supabase.com)
+
+Telegram Mini App для курьеров — расчёт заработков, статистика, рейтинги.
+
+## 🚀 Быстрый старт
+
+```bash
+# Установить зависимости
+npm install
+
+# Запустить dev сервер
+npm run dev
+
+# Собрать для production
+npm run build
+```
+
+Откройте http://localhost:5173
+
+## 📚 Важная документация
+
+| Документ                                   | Что в нём                                      |
+| ------------------------------------------ | ---------------------------------------------- |
+| **[SUPABASE_SETUP.md](SUPABASE_SETUP.md)** | 🔑 **Полная инструкция по настройке Supabase** |
+| [STATUS.md](STATUS.md)                     | 📊 Статус проекта, завершённые фазы            |
+| [TESTING.md](TESTING.md)                   | 🧪 Как тестировать функционал                  |
+
+## ✨ Текущее состояние (Phase 5)
+
+✅ **Все 4 экрана готовы:**
+
+- 🧮 ShiftCalculator - расчёт смены
+- 📊 Statistics - графики и статистика
+- ⚙️ Profile - настройки тарифов
+- 🏆 Leaderboard - рейтинг курьеров
+
+✅ **Синхронизация:**
+
+- localStorage по умолчанию (работает везде)
+- Supabase поддержка готова (требует настройки)
+
+✅ **Build:**
+
+- Production bundle: 782 KB (gzip: 229 KB)
+- TypeScript: ошибок нет
+- Мобильный дизайн готов
+
+## 🔧 Что нужно сделать дальше
+
+### Для тестирования (сейчас)
+
+1. `npm run dev` → http://localhost:5173
+2. Введите смену в ShiftCalculator
+3. Нажмите "Сохранить"
+4. Проверьте статистику и рейтинг
+
+### Для cloud-функций (Phase 5 завершение)
+
+1. Создайте проект на [supabase.com](https://supabase.com)
+2. Следуйте инструкциям в [SUPABASE_SETUP.md](SUPABASE_SETUP.md)
+3. Настройте `.env.local`
+4. Рестартуйте `npm run dev`
+
+**Результат:** Синхронизация в облаке + реальный рейтинг
+
+### Для Telegram (Phase 6)
+
+- Integrация Telegram WebApp SDK
+- Реальная аутентификация по user.id
+- Развёртывание на Telegram
+
+## 📊 Структура проекта
+
+```
+src/
+├── screens/
+│  ├── ShiftCalculator.tsx  → Ввод и расчёт смены
+│  ├── Statistics.tsx        → Графики и аналитика
+│  ├── Profile.tsx           → Настройки
+│  └── Leaderboard.tsx       → Рейтинг (реальные данные из DB)
+├── components/              → UI компоненты (Button, Card, Chart и т.д.)
+├── store/                   → Zustand state (shifts, user settings)
+├── utils/
+│  ├── calculations.ts       → Ядро расчётов (5 шагов)
+│  ├── supabase.ts          → API для Supabase
+│  ├── useShiftsSync.ts     → Автосинхронизация shifts
+│  └── useUserSettingsSync.ts → Автосинхронизация settings
+└── App.tsx                 → Главный компонент (табы)
+```
+
+## 🧮 Расчётная формула
+
+```
+1. timeIncome = minutes × ratePerMinute
+2. ordersIncome = (zone1 × price1) + (zone2 × price2) + (zone3 × price3)
+3. totalWithTax = timeIncome + ordersIncome
+4. totalWithoutTax = totalWithTax × taxCoefficient
+5. netProfit = totalWithoutTax − fuelCost
+```
+
+**Важно:** Налог применяется один раз на шаге 4 (в UI показываются значения БЕЗ налога).
+
+## 📱 Demo Data
+
+При первом запуске автоматически загружается 5 тестовых смен (15-19 января):
+
+- Заработки: 1536₽ - 3050₽
+- Разные зоны и километраж
+- Реалистичные затраты
+
+Просмотр в консоли:
+
+```javascript
+JSON.parse(localStorage.getItem("courier-finance:shifts"));
+```
+
+## ☁️ Хранилище данных
+
+### Локально (по умолчанию) ✅
+
+```
+localStorage:
+- "courier-finance:shifts"
+- "courier-finance:user-settings"
+- "courier-finance:user-id"
+```
+
+✅ Работает везде, без интернета
+
+### В облаке (Supabase) - готово к настройке
+
+```
+Таблицы:
+- users (telegram_id, username, settings)
+- shifts (полные данные смен)
+- leaderboard_cache (агрегированные рейтинги)
+
+Функция:
+- get_leaderboard() (TOP-5 за период)
+```
+
+**Как включить:** [SUPABASE_SETUP.md](SUPABASE_SETUP.md)
+
+## 🛠️ Tech Stack
+
+- React 19.2 - UI
+- TypeScript 5.9 - типизация
+- Vite 7.3 - сборка
+- Tailwind CSS 3.4 - стили
+- Zustand 5.0 - state
+- Recharts 3.6 - графики
+- Supabase 2.90 - backend (опционально)
+
+## 📊 Статусы фаз
+
+| #   | Фаза                          | Статус   |                                       |
+| --- | ----------------------------- | -------- | ------------------------------------- |
+| 0-3 | Design → UI Components → Calc | ✅ DONE  |                                       |
+| 4   | localStorage Integration      | ✅ DONE  |                                       |
+| 5   | Supabase Infrastructure       | ✅ READY | Требует настройки (инструкция готова) |
+| 6   | Telegram WebApp SDK           | 🔜 TODO  |                                       |
+| 7   | Real-time Features            | 🔜 TODO  |                                       |
+| 8   | Production Deploy             | 🔜 TODO  |                                       |
+
+**Текущий статус: 5/8 - Backend Infrastructure Ready** 🔧
 
 Vision продукта
 
@@ -123,7 +288,6 @@ Courier Finance — это Telegram Mini App для курьеров, предн
 
 timeIncome = minutes × ratePerMinute
 
-
 Доход за заказы:
 
 ordersIncome =
@@ -131,21 +295,17 @@ ordersIncome =
 (zone2 × priceZone2) +
 (zone3 × priceZone3)
 
-
 Общий доход с налогом:
 
 totalWithTax = timeIncome + ordersIncome
-
 
 Доход без налога:
 
 totalWithoutTax = totalWithTax × taxCoefficient
 
-
 Чистая прибыль:
 
 netProfit = totalWithoutTax − fuelCost
-
 
 В статистике всегда отображаются:
 
@@ -156,18 +316,17 @@ netProfit = totalWithoutTax − fuelCost
 Структура данных одной смены
 
 {
-  "date": "2026-01-17",
-  "minutes": 480,
-  "zone1": 5,
-  "zone2": 3,
-  "zone3": 2,
-  "kilometers": 82,
-  "fuelCost": 1000,
-  "totalWithTax": 3500,
-  "totalWithoutTax": 3045,
-  "netProfit": 2045
+"date": "2026-01-17",
+"minutes": 480,
+"zone1": 5,
+"zone2": 3,
+"zone3": 2,
+"kilometers": 82,
+"fuelCost": 1000,
+"totalWithTax": 3500,
+"totalWithoutTax": 3045,
+"netProfit": 2045
 }
-
 
 Экраны приложения
 
@@ -372,7 +531,6 @@ price_zone3
 tax_coefficient
 currency
 
-
 Таблица shifts:
 
 id
@@ -388,7 +546,6 @@ total_with_tax
 total_without_tax
 net_profit
 created_at
-
 
 ROADMAP ПРОЕКТА
 

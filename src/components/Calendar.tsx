@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 
 interface CalendarProps {
   shifts: Record<string, number>; // date -> netProfit
@@ -13,18 +13,52 @@ export default function Calendar({
   onSelectDate,
   maxValue = 5000,
 }: CalendarProps) {
-  // Memoize parsed date values
+  // State for month/year navigation
+  const [displayMonth, setDisplayMonth] = useState<string>(
+    selectedDate.slice(0, 7),
+  ); // YYYY-MM
+
+  // Parse display month
+  const [displayYear, displayMonthNum] = displayMonth.split("-").map(Number);
+
+  // Navigation handlers
+  const handlePrevMonth = () => {
+    const date = new Date(displayYear, displayMonthNum - 2, 1);
+    const newMonth = String(date.getMonth() + 1).padStart(2, "0");
+    const newYear = date.getFullYear();
+    setDisplayMonth(`${newYear}-${newMonth}`);
+  };
+
+  const handleNextMonth = () => {
+    const date = new Date(displayYear, displayMonthNum, 1);
+    const newMonth = String(date.getMonth() + 1).padStart(2, "0");
+    const newYear = date.getFullYear();
+    setDisplayMonth(`${newYear}-${newMonth}`);
+  };
+
+  const handleToday = () => {
+    const today = new Date().toISOString().split("T")[0];
+    setDisplayMonth(today.slice(0, 7));
+    onSelectDate(today);
+  };
+
+  // Memoize parsed date values for DISPLAYED month
   const { year, month, daysInMonth, startingDayOfWeek } = useMemo(() => {
-    const [y, m] = selectedDate.split("-").map(Number);
+    const y = displayYear;
+    const m = displayMonthNum;
     const firstDay = new Date(y, m - 1, 1);
     const lastDay = new Date(y, m, 0);
+    // getDay() returns 0-6 (0=Sunday, 6=Saturday)
+    // We want Monday=0, so: (getDay() + 6) % 7
+    const dayOfWeek = firstDay.getDay();
+    const mondayStart = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
     return {
       year: y,
       month: m,
       daysInMonth: lastDay.getDate(),
-      startingDayOfWeek: firstDay.getDay(),
+      startingDayOfWeek: mondayStart,
     };
-  }, [selectedDate]);
+  }, [displayYear, displayMonthNum]);
 
   const days = useMemo(() => {
     const arr = [];
@@ -62,14 +96,44 @@ export default function Calendar({
 
   return (
     <div className="w-full">
-      {/* Month/Year Header */}
-      <div className="text-center mb-4">
-        <h3 className="text-lg font-bold text-gray-800">
+      {/* Month/Year Header with Navigation */}
+      <div className="flex items-center justify-between mb-4 gap-3">
+        <button
+          onClick={handlePrevMonth}
+          className="flex items-center gap-1 px-3 py-2 bg-gradient-to-r from-blue-500 to-blue-500 hover:from-blue-600 hover:to-blue-700 text-white rounded-lg text-sm font-semibold transition-all duration-200 shadow-md hover:shadow-lg hover:scale-105"
+          title="Предыдущий месяц"
+        >
+          <span className="text-lg">←</span>
+          <span className="hidden sm:inline">Назад</span>
+        </button>
+
+        <h3 className="text-lg font-bold text-gray-800 min-w-48 text-center bg-gray-100 px-4 py-2 rounded-lg">
           {new Date(year, month - 1).toLocaleDateString("ru-RU", {
             month: "long",
             year: "numeric",
           })}
         </h3>
+
+        <button
+          onClick={handleNextMonth}
+          className="flex items-center gap-1 px-3 py-2 bg-gradient-to-r from-blue-500 to-blue-500 hover:from-blue-600 hover:to-blue-700 text-white rounded-lg text-sm font-semibold transition-all duration-200 shadow-md hover:shadow-lg hover:scale-105"
+          title="Следующий месяц"
+        >
+          <span className="hidden sm:inline">Вперед</span>
+          <span className="text-lg">→</span>
+        </button>
+      </div>
+
+      {/* Today Button */}
+      <div className="text-center mb-3">
+        <button
+          onClick={handleToday}
+          className="inline-flex items-center gap-1 px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-500 hover:from-blue-600 hover:to-blue-700 text-white text-sm font-semibold rounded-lg transition-all duration-200 shadow-md hover:shadow-lg hover:scale-105"
+          title="Перейти на сегодня"
+        >
+          <span>📅</span>
+          <span>Сегодня</span>
+        </button>
       </div>
 
       {/* Weekday Headers */}
