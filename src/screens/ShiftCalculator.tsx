@@ -2,6 +2,7 @@ import { useEffect, useState, useMemo } from "react";
 import { Button, Card, NumberInput, StatCard } from "../components";
 import { calculateShift, type CalculationParams } from "../utils/calculations";
 import { useUserStore, useShiftsStore } from "../store";
+import { syncShift, isSupabaseConfigured } from "../utils/supabase";
 
 export default function ShiftCalculator() {
   const userSettings = useUserStore((state: any) => state.settings);
@@ -79,7 +80,20 @@ export default function ShiftCalculator() {
   const handleSave = async () => {
     setIsSaving(true);
     try {
+      // Save to local store first
       saveCurrentShift();
+
+      // Try to sync to Supabase if configured
+      if (isSupabaseConfigured() && currentShift) {
+        console.log("🔄 Attempting to sync shift to Supabase...");
+        const syncResult = await syncShift(currentShift);
+        if (syncResult) {
+          console.log("✅ Shift synced to Supabase");
+        } else {
+          console.warn("⚠️ Failed to sync to Supabase, but saved locally");
+        }
+      }
+
       // Show success feedback
       setTimeout(() => {
         alert(isEditMode ? "✅ Смена обновлена!" : "✅ Смена сохранена!");
@@ -90,6 +104,7 @@ export default function ShiftCalculator() {
       }, 300);
     } catch (error) {
       console.error("Failed to save shift:", error);
+      alert("❌ Ошибка при сохранении. Проверьте консоль.");
       setIsSaving(false);
     }
   };

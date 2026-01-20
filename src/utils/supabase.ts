@@ -110,29 +110,50 @@ export const initializeUser = async (username?: string) => {
  * Sync a single shift to Supabase
  */
 export const syncShift = async (shift: any) => {
-  if (!isSupabaseConfigured()) return null;
-
-  const userId = getCurrentUserId();
+  if (!isSupabaseConfigured()) {
+    console.log("📍 Supabase not configured, skipping sync");
+    return null;
+  }
 
   try {
+    const userId = getCurrentUserId();
+    console.log("🔄 Syncing single shift for user:", userId);
+
+    const shiftData = {
+      id: shift.id || crypto.randomUUID(),
+      telegram_id: userId,
+      date: shift.date,
+      minutes: shift.minutes,
+      zone1: shift.zone1,
+      zone2: shift.zone2,
+      zone3: shift.zone3,
+      kilometers: shift.kilometers,
+      fuelCost: shift.fuelCost,
+      timeIncome: shift.timeIncome,
+      ordersIncome: shift.ordersIncome,
+      totalWithTax: shift.totalWithTax,
+      totalWithoutTax: shift.totalWithoutTax,
+      netProfit: shift.netProfit,
+      updated_at: new Date().toISOString(),
+    };
+
+    console.log("📤 Sending shift data:", shiftData);
+
     const { data, error } = await supabase
       .from("shifts")
-      .upsert(
-        {
-          telegram_id: userId,
-          date: shift.date,
-          ...shift,
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: "telegram_id,date" },
-      )
+      .upsert(shiftData, { onConflict: "telegram_id,date" })
       .select()
       .single();
 
-    if (error) throw error;
+    if (error) {
+      console.error("❌ Supabase error:", error);
+      throw error;
+    }
+
+    console.log("✅ Shift synced successfully:", data);
     return data;
   } catch (error) {
-    console.error("Failed to sync shift:", error);
+    console.error("❌ Failed to sync shift:", error);
     return null;
   }
 };
@@ -399,4 +420,80 @@ export const subscribeToShifts = (
 export const unsubscribeFromShifts = async (channel: any) => {
   if (!channel) return;
   await supabase.removeChannel(channel);
+};
+/**
+ * Test Supabase connection (for debugging)
+ */
+export const testSupabaseConnection = async () => {
+  console.log("\n🧪 Testing Supabase Connection...");
+
+  if (!isSupabaseConfigured()) {
+    console.error("❌ Supabase not configured (missing URL or Key)");
+    return false;
+  }
+
+  try {
+    console.log("📡 Testing users table read access...");
+    const { data: userData, error: userError } = await supabase
+      .from("users")
+      .select("count")
+      .limit(1);
+
+    if (userError) {
+      console.error("❌ Cannot read users table:", userError.message);
+      return false;
+    }
+    console.log("✅ Users table accessible");
+
+    console.log("📡 Testing shifts table read access...");
+    const { data: shiftsData, error: shiftsError } = await supabase
+      .from("shifts")
+      .select("count")
+      .limit(1);
+
+    if (shiftsError) {
+      console.error("❌ Cannot read shifts table:", shiftsError.message);
+      return false;
+    }
+    console.log("✅ Shifts table accessible");
+
+    // Try to get current user ID
+    try {
+      const userId = getCurrentUserId();
+      console.log("✅ Telegram User ID:", userId);
+    } catch (e) {
+      console.warn(
+        "⚠️ Cannot get Telegram User ID (might be in browser, not in Mini App)",
+      );
+    }
+
+    console.log("✅ All tests passed! Connection is working.");
+    return true;
+  } catch (error) {
+    console.error("❌ Connection test failed:", error);
+    return false;
+  }
+};
+
+/**
+ * Get diagnostic info (for debugging)
+ */
+export const getDiagnosticInfo = () => {
+  return {
+    supabaseConfigured: isSupabaseConfigured(),
+    supabaseUrl: supabaseUrl ? "✅ Set" : "❌ Missing",
+    supabaseKey: supabaseAnonKey ? "✅ Set" : "❌ Missing",
+    telegramWebApp:
+      typeof window !== "undefined" && !!window.Telegram?.WebApp
+        ? "✅ Available"
+        : "❌ Not available",
+    userIdAvailable: (() => {
+      try {
+        getCurrentUserId();
+        return "✅ Available";
+      } catch {
+        return "❌ Not available";
+      }
+    })(),
+  };
 };
