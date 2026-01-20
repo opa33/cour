@@ -76,17 +76,17 @@ export const initializeUser = async (username?: string) => {
     console.log("👤 Initializing user with ID:", userId);
 
     const result = await retryAsync(async () => {
-      const userData = {
+      const userDataToSync = {
         telegram_id: userId,
         username: username || `User_${userId.slice(0, 8)}`,
         created_at: new Date().toISOString(),
       };
 
-      console.log("📤 Sending user data:", userData);
+      console.log("📤 Sending user data:", userDataToSync);
 
       const { data, error } = await supabase
         .from("users")
-        .upsert(userData, { onConflict: "telegram_id" })
+        .upsert(userDataToSync, { onConflict: "telegram_id" })
         .select()
         .single();
 
@@ -434,7 +434,7 @@ export const testSupabaseConnection = async () => {
 
   try {
     console.log("📡 Testing users table read access...");
-    const { data: userData, error: userError } = await supabase
+    const { error: userError } = await supabase
       .from("users")
       .select("count")
       .limit(1);
@@ -446,7 +446,7 @@ export const testSupabaseConnection = async () => {
     console.log("✅ Users table accessible");
 
     console.log("📡 Testing shifts table read access...");
-    const { data: shiftsData, error: shiftsError } = await supabase
+    const { error: shiftsError } = await supabase
       .from("shifts")
       .select("count")
       .limit(1);
@@ -461,7 +461,7 @@ export const testSupabaseConnection = async () => {
     try {
       const userId = getCurrentUserId();
       console.log("✅ Telegram User ID:", userId);
-    } catch (e) {
+    } catch {
       console.warn(
         "⚠️ Cannot get Telegram User ID (might be in browser, not in Mini App)",
       );
@@ -484,7 +484,7 @@ export const getDiagnosticInfo = () => {
     supabaseUrl: supabaseUrl ? "✅ Set" : "❌ Missing",
     supabaseKey: supabaseAnonKey ? "✅ Set" : "❌ Missing",
     telegramWebApp:
-      typeof window !== "undefined" && !!window.Telegram?.WebApp
+      typeof window !== "undefined" && !!(window as any).Telegram?.WebApp
         ? "✅ Available"
         : "❌ Not available",
     userIdAvailable: (() => {
