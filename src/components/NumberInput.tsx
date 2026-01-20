@@ -30,6 +30,7 @@ export default function NumberInput({
           ${error ? "border-red-500 bg-red-50" : "border-gray-300 bg-white"}
           ${className}
         `}
+        style={{ fontSize: "16px" } as any}
         {...props}
       />
       {error && <span className="text-sm text-red-500">{error}</span>}

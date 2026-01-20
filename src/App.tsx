@@ -101,8 +101,11 @@ export default function App() {
   }
 
   return (
-    <div className="w-full h-full">
-      {renderContent()}
+    <div
+      className="w-full h-full flex flex-col"
+      style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+    >
+      <div className="flex-1 overflow-y-auto pb-24">{renderContent()}</div>
       <Tabs
         tabs={tabs}
         activeTab={activeTab}

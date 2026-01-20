@@ -58,7 +58,7 @@ export default function Profile() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4 pb-24">
+    <div className="min-h-screen bg-gray-50 p-4 pb-safe pl-safe pr-safe">
       <div className="max-w-md mx-auto">
         {/* User Card - Profile Header */}
         <Card variant="elevated" className="mb-6 p-6 text-center">

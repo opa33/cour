@@ -172,7 +172,7 @@ export default function Statistics() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4 pb-24">
+    <div className="min-h-screen bg-gray-50 p-4 pb-safe pl-safe pr-safe">
       <div className="max-w-md mx-auto">
         {/* Header */}
         <div className="mb-6">
@@ -208,6 +208,42 @@ export default function Statistics() {
                 </button>
               ),
             )}
+          </div>
+        </Card>
+
+        {/* Details Panel - MOVED TO TOP */}
+        <Card
+          variant="elevated"
+          className="mb-4 bg-gradient-to-br from-blue-50 to-purple-50 border-l-4 border-blue-500"
+        >
+          <h3 className="text-lg font-semibold text-gray-800 mb-4">
+            📈 Статистика периода
+          </h3>
+          <div className="grid grid-cols-2 gap-3 text-sm mb-4">
+            <div className="bg-white p-3 rounded border border-blue-200">
+              <p className="text-gray-600 text-xs mb-1">Смены</p>
+              <p className="text-2xl font-bold text-blue-600">
+                {periodShifts.length}
+              </p>
+            </div>
+            <div className="bg-white p-3 rounded border border-purple-200">
+              <p className="text-gray-600 text-xs mb-1">Часы</p>
+              <p className="text-2xl font-bold text-purple-600">
+                {Math.floor(totalMinutes / 60)}
+                <span className="text-sm">ч</span>
+              </p>
+              <p className="text-xs text-gray-500">+ {totalMinutes % 60}м</p>
+            </div>
+            <div className="bg-white p-3 rounded border border-orange-200">
+              <p className="text-gray-600 text-xs mb-1">Заказов</p>
+              <p className="text-2xl font-bold text-orange-600">
+                {totalOrders}
+              </p>
+            </div>
+            <div className="bg-white p-3 rounded border border-green-200">
+              <p className="text-gray-600 text-xs mb-1">Км</p>
+              <p className="text-2xl font-bold text-green-600">{totalKm}</p>
+            </div>
           </div>
         </Card>
 
@@ -279,7 +315,7 @@ export default function Statistics() {
             />
           )}
           <StatCard
-            label="Средний доход"
+            label="Средний доход за смену"
             value={avgEarning}
             unit={currency}
             color="blue"
@@ -301,40 +337,11 @@ export default function Statistics() {
           <ChartsContainer data={chartData} />
         </Suspense>
 
-        {/* Details */}
-        <Card variant="elevated" className="mb-4">
-          <h3 className="text-lg font-semibold text-gray-800 mb-3">
-            Детали периода
-          </h3>
-          <div className="grid grid-cols-2 gap-3 text-sm">
-            <div className="bg-blue-50 p-3 rounded">
-              <p className="text-gray-600">Смены</p>
-              <p className="text-lg font-bold text-blue-600">
-                {periodShifts.length}
-              </p>
-            </div>
-            <div className="bg-purple-50 p-3 rounded">
-              <p className="text-gray-600">Часов</p>
-              <p className="text-lg font-bold text-purple-600">
-                {Math.round(totalMinutes / 60)}ч {totalMinutes % 60}м
-              </p>
-            </div>
-            <div className="bg-orange-50 p-3 rounded">
-              <p className="text-gray-600">Заказов</p>
-              <p className="text-lg font-bold text-orange-600">{totalOrders}</p>
-            </div>
-            <div className="bg-green-50 p-3 rounded">
-              <p className="text-gray-600">Км</p>
-              <p className="text-lg font-bold text-green-600">{totalKm}</p>
-            </div>
-          </div>
-        </Card>
-
-        {/* Shifts List */}
+        {/* Shifts List - MOVED FROM BOTTOM */}
         {periodShifts.length > 0 ? (
-          <Card variant="elevated">
+          <Card variant="elevated" className="mb-4">
             <h3 className="text-lg font-semibold text-gray-800 mb-3">
-              Смены периода
+              📋 Смены периода
             </h3>
             <div className="space-y-2">
               {periodShifts.map((shift: any) => (
@@ -353,9 +360,9 @@ export default function Statistics() {
                   </div>
                   <div className="text-xs text-gray-600 space-y-1">
                     <p>
-                      ⏱️ {Math.round(shift.minutes / 60)}ч • 🧮{" "}
-                      {shift.zone1 + shift.zone2 + shift.zone3} заказов • 🚗{" "}
-                      {shift.kilometers}км
+                      ⏱️ {Math.floor(shift.minutes / 60)}ч {shift.minutes % 60}м
+                      • 🧮 {shift.zone1 + shift.zone2 + shift.zone3} заказов •
+                      🚗 {shift.kilometers}км
                     </p>
                     <p>
                       💵 Доход:{" "}

@@ -133,7 +133,7 @@ export default function Leaderboard() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4 pb-24">
+    <div className="min-h-screen bg-gray-50 p-4 pb-safe pl-safe pr-safe">
       <div className="max-w-md mx-auto">
         {/* Header */}
         <div className="mb-6">

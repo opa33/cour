@@ -14,6 +14,10 @@ body,
   margin: 0;
   padding: 0;
   background: #f5f5f5;
+  /* iOS safe-area support */
+  padding-top: max(0px, env(safe-area-inset-top));
+  padding-left: max(0px, env(safe-area-inset-left));
+  padding-right: max(0px, env(safe-area-inset-right));
 }
 
 body {
@@ -22,4 +26,23 @@ body {
     "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  /* iOS-specific fixes */
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+
+/* Prevent zoom on input focus (iOS) */
+input,
+button,
+textarea,
+select {
+  font-size: 16px;
+}
+
+/* Fix for notch on iPhone */
+@supports (padding: max(0px)) {
+  body {
+    padding-left: max(12px, env(safe-area-inset-left));
+    padding-right: max(12px, env(safe-area-inset-right));
+  }
 }

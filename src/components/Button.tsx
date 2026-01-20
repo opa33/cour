@@ -40,10 +40,12 @@ export default function Button({
       className={`
         font-semibold rounded-lg transition-colors duration-200
         disabled:opacity-50 disabled:cursor-not-allowed
+        active:scale-95 transition-transform
         ${variantClasses[variant]}
         ${sizeClasses[size]}
         ${className}
       `}
+      style={{ fontSize: "16px", WebkitTouchCallout: "none" } as any}
       {...props}
     >
       {isLoading ? "⏳ Загрузка..." : children}
