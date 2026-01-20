@@ -15,10 +15,10 @@ import { initTelegram } from "./utils/telegram";
 type TabId = "calculator" | "statistics" | "leaderboard" | "profile";
 
 const tabs = [
-  { id: "calculator", label: "Расчёт", icon: "🧮" },
-  { id: "statistics", label: "Статистика", icon: "📊" },
-  { id: "leaderboard", label: "Рейтинг", icon: "🏆" },
-  { id: "profile", label: "Профиль", icon: "⚙️" },
+  { id: "calculator", label: "Расчёт", icon: "" },
+  { id: "statistics", label: "Статистика", icon: "" },
+  { id: "leaderboard", label: "Рейтинг", icon: "" },
+  { id: "profile", label: "Профиль", icon: "" },
 ];
 
 export default function App() {
