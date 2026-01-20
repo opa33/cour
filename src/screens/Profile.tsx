@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Button, Card, NumberInput } from "../components";
 import { useUserStore } from "../store";
 import type { UserSettings } from "../store/types";
+import { getTelegramUser } from "../utils/telegram";
 
 export default function Profile() {
   const userSettings = useUserStore((state: any) => state.settings);
@@ -10,6 +11,21 @@ export default function Profile() {
   const [formData, setFormData] = useState<UserSettings>(userSettings);
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
+
+  // Telegram user data
+  const [telegramUser, setTelegramUser] = useState<any>(null);
+  const [displayName, setDisplayName] = useState("");
+  const [photoUrl, setPhotoUrl] = useState<string | null>(null);
+
+  // Initialize Telegram user data
+  useEffect(() => {
+    const user = getTelegramUser();
+    setTelegramUser(user);
+    if (user) {
+      setDisplayName(user.first_name || user.username || `User ${user.id}`);
+      setPhotoUrl(user.photo_url || null);
+    }
+  }, []);
 
   // Sync form when settings change
   useEffect(() => {
@@ -44,13 +60,38 @@ export default function Profile() {
   return (
     <div className="min-h-screen bg-gray-50 p-4 pb-24">
       <div className="max-w-md mx-auto">
-        {/* Header */}
-        <div className="mb-6">
-          <h1 className="text-3xl font-bold text-gray-800">⚙️ Профиль</h1>
-          <p className="text-gray-600 text-sm mt-1">
-            Настройка параметров заработка
-          </p>
-        </div>
+        {/* User Card - Profile Header */}
+        <Card variant="elevated" className="mb-6 p-6 text-center">
+          <div className="flex flex-col items-center">
+            {/* User Photo */}
+            {photoUrl ? (
+              <img
+                src={photoUrl}
+                alt="Profile"
+                className="w-24 h-24 rounded-full border-4 border-blue-500 mb-4 object-cover"
+              />
+            ) : (
+              <div className="w-24 h-24 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center mb-4">
+                <span className="text-white text-3xl">👤</span>
+              </div>
+            )}
+
+            {/* User Name */}
+            <h2 className="text-2xl font-bold text-gray-800">{displayName}</h2>
+
+            {/* Username */}
+            {telegramUser?.username && (
+              <p className="text-sm text-gray-600 mt-1">
+                @{telegramUser.username}
+              </p>
+            )}
+
+            {/* Telegram ID */}
+            <p className="text-xs text-gray-500 mt-2">
+              ID: {telegramUser?.id || "N/A"}
+            </p>
+          </div>
+        </Card>
 
         {/* Tariffs Section */}
         <Card variant="elevated" className="mb-4">
@@ -173,15 +214,12 @@ export default function Profile() {
           </div>
         </Card>
 
-        {/* Info Section */}
-        <Card className="mb-4 bg-yellow-50 border border-yellow-200">
-          <p className="text-sm text-gray-700">
-            ℹ️{" "}
-            <span className="font-semibold">
-              Все изменения сохраняются автоматически в localStorage
-            </span>
-          </p>
-        </Card>
+        {/* Success Message */}
+        {saveSuccess && (
+          <div className="mt-4 p-3 bg-green-100 border border-green-300 text-green-800 rounded text-sm text-center font-semibold">
+            ✅ Настройки сохранены!
+          </div>
+        )}
 
         {/* Action Buttons */}
         <div className="space-y-2">
@@ -203,13 +241,6 @@ export default function Profile() {
             ↩️ Отменить
           </Button>
         </div>
-
-        {/* Success Message */}
-        {saveSuccess && (
-          <div className="mt-4 p-3 bg-green-100 border border-green-300 text-green-800 rounded text-sm text-center font-semibold">
-            ✅ Настройки сохранены!
-          </div>
-        )}
       </div>
     </div>
   );

@@ -43,12 +43,20 @@ const retryAsync = async <T>(
   throw lastError;
 };
 
+// Cache user ID to avoid repeated lookups
+let cachedUserId: string | null = null;
+
 /**
- * Get current user ID from Telegram WebApp
+ * Get current user ID from Telegram WebApp (with caching)
  */
 export const getCurrentUserId = (): string => {
+  if (cachedUserId) {
+    return cachedUserId;
+  }
+
   const userId = getUserId();
   if (userId) {
+    cachedUserId = userId;
     console.log("👤 User ID:", userId);
     return userId;
   }

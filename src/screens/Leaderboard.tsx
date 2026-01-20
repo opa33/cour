@@ -183,34 +183,47 @@ export default function Leaderboard() {
         {topCouriers.length > 0 ? (
           <Card variant="elevated" className="mb-4">
             <h2 className="text-lg font-semibold text-gray-800 mb-4">ТОП-5</h2>
-            <div className="space-y-2">
+            <div className="space-y-3">
               {topCouriers.map((courier) => (
                 <div
                   key={courier.userId}
-                  className={`p-3 rounded-lg flex items-center justify-between ${
+                  className={`p-4 rounded-lg flex items-center gap-3 transition-all ${
                     courier.userId === currentUserId
-                      ? "bg-blue-100 border-2 border-blue-300"
-                      : "bg-gray-100 border border-gray-200"
+                      ? "bg-gradient-to-r from-blue-50 to-blue-100 border-2 border-blue-400 shadow-md"
+                      : "bg-white border border-gray-200 hover:shadow-md"
                   }`}
                 >
-                  <div className="flex items-center gap-3 flex-1">
-                    <div className="text-2xl font-bold w-8 text-center">
-                      {getMedal(courier.rank)}
-                    </div>
-                    <div className="flex-1">
-                      <p className="font-semibold text-gray-800">
-                        {courier.username}
-                        {courier.userId === currentUserId && " (вы)"}
-                      </p>
-                      <p className="text-xs text-gray-600">
-                        Позиция #{courier.rank}
-                      </p>
-                    </div>
+                  {/* Medal / Rank */}
+                  <div className="text-3xl font-bold w-12 text-center flex-shrink-0">
+                    {getMedal(courier.rank)}
                   </div>
-                  <div className="text-right">
+
+                  {/* Avatar placeholder - would use photo_url from Telegram in production */}
+                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-gray-300 to-gray-400 flex items-center justify-center flex-shrink-0">
+                    <span className="text-lg">👤</span>
+                  </div>
+
+                  {/* User Info */}
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-gray-800 truncate">
+                      {courier.username}
+                      {courier.userId === currentUserId && (
+                        <span className="ml-1 text-xs bg-blue-500 text-white px-2 py-0.5 rounded">
+                          ВЫ
+                        </span>
+                      )}
+                    </p>
+                    <p className="text-xs text-gray-600">
+                      #{courier.rank} место
+                    </p>
+                  </div>
+
+                  {/* Earnings */}
+                  <div className="text-right flex-shrink-0">
                     <p className="font-bold text-lg text-green-600">
                       {formatCurrency(courier.earnings, currency)}
                     </p>
+                    <p className="text-xs text-gray-500">{currency}</p>
                   </div>
                 </div>
               ))}

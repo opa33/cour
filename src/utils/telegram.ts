@@ -16,22 +16,24 @@ export const initTelegram = () => {
 export const getUserId = (): string | null => {
   const w = window as any;
 
-  // Try initDataUnsafe first (more reliable for development)
+  // Try initDataUnsafe first (most reliable)
   if (w.Telegram?.WebApp?.initDataUnsafe?.user?.id) {
     const id = String(w.Telegram.WebApp.initDataUnsafe.user.id);
+    console.log("✅ Got Telegram ID from initDataUnsafe:", id);
     return id;
   }
 
   // Fallback to initData if available
   if (w.Telegram?.WebApp?.initData) {
-    // Parse initData to extract user ID
     try {
       const params = new URLSearchParams(w.Telegram.WebApp.initData);
       const userData = params.get("user");
       if (userData) {
         const user = JSON.parse(userData);
         if (user.id) {
-          return String(user.id);
+          const id = String(user.id);
+          console.log("✅ Got Telegram ID from initData:", id);
+          return id;
         }
       }
     } catch (error) {
@@ -39,6 +41,9 @@ export const getUserId = (): string | null => {
     }
   }
 
+  console.error(
+    "❌ Telegram User ID not available - app must run inside Telegram Mini App",
+  );
   return null;
 };
 
@@ -46,6 +51,31 @@ export const getUserId = (): string | null => {
  * Get user's Telegram username
  */
 export const getUsername = (): string | null => {
-  const webApp = initTelegram();
-  return webApp?.initDataUnsafe?.user?.username || null;
+  const w = window as any;
+  return w.Telegram?.WebApp?.initDataUnsafe?.user?.username || null;
+};
+
+/**
+ * Get user's first name from Telegram
+ */
+export const getFirstName = (): string | null => {
+  const w = window as any;
+  return w.Telegram?.WebApp?.initDataUnsafe?.user?.first_name || null;
+};
+
+/**
+ * Get user's photo URL from Telegram
+ */
+export const getUserPhotoUrl = (): string | null => {
+  const w = window as any;
+  // Telegram provides photo_url in initDataUnsafe
+  return w.Telegram?.WebApp?.initDataUnsafe?.user?.photo_url || null;
+};
+
+/**
+ * Get full user data from Telegram
+ */
+export const getTelegramUser = () => {
+  const w = window as any;
+  return w.Telegram?.WebApp?.initDataUnsafe?.user || null;
 };
