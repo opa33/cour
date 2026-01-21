@@ -45,9 +45,7 @@ export default function Profile() {
     }));
   };
 
-  const handleThemeChange = async (
-    theme: "light" | "dark" | "system",
-  ) => {
+  const handleThemeChange = async (theme: "light" | "dark" | "system") => {
     setFormData((prev) => ({
       ...prev,
       themePreference: theme,

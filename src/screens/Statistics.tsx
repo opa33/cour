@@ -287,7 +287,7 @@ export default function Statistics() {
             </div>
           </div>
         </Card>
-        
+
         {/* Efficiency Metrics */}
         {periodShifts.length > 0 && (
           <div className="grid grid-cols-2 gap-2 mb-6">

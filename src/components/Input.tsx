@@ -37,9 +37,13 @@ export default function Input({
         }
         {...props}
       />
-      {error && <span className="text-sm text-red-500 dark:text-red-400">{error}</span>}
+      {error && (
+        <span className="text-sm text-red-500 dark:text-red-400">{error}</span>
+      )}
       {helperText && !error && (
-        <span className="text-sm text-gray-500 dark:text-gray-400">{helperText}</span>
+        <span className="text-sm text-gray-500 dark:text-gray-400">
+          {helperText}
+        </span>
       )}
     </div>
   );

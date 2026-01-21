@@ -15,8 +15,10 @@ export default function Card({
 }: CardProps) {
   const baseClasses = "rounded-lg p-4";
   const variantClasses = {
-    default: "bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800",
-    elevated: "bg-white dark:bg-gray-900 shadow-md dark:shadow-lg dark:shadow-gray-800/50",
+    default:
+      "bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800",
+    elevated:
+      "bg-white dark:bg-gray-900 shadow-md dark:shadow-lg dark:shadow-gray-800/50",
   };
 
   return (
