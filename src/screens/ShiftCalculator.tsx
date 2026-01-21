@@ -198,11 +198,11 @@ export default function ShiftCalculator() {
   }
 
   return (
-    <div className="min-h-screen bg-white p-4 pb-safe pl-safe pr-safe overflow-x-hidden">
+    <div className="min-h-screen bg-white dark:bg-gray-950 p-4 pb-safe pl-safe pr-safe overflow-x-hidden">
       <div className="max-w-md mx-auto">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-2xl font-semibold text-gray-900">
+          <h1 className="text-2xl font-semibold text-gray-900 dark:text-white">
             {isEditMode ? "Внесение смены" : "Расчёт смены"}
           </h1>
         </div>

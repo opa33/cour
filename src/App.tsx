@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { ShiftCalculator, Statistics, Profile, Leaderboard } from "./screens";
-import { useShiftsStore } from "./store";
+import { useShiftsStore, useUserStore } from "./store";
 import Tabs from "./components/Tabs";
 import {
   useShiftsSync,
@@ -28,6 +28,7 @@ export default function App() {
   const setShiftsInitialized = useShiftsStore(
     (state: any) => state.setInitialized,
   );
+  const userSettings = useUserStore((state: any) => state.settings);
 
   // Load from Supabase
   const loadShiftsFromSupabase = useLoadShiftsFromSupabase();
@@ -36,6 +37,40 @@ export default function App() {
   // Sync hooks for auto-sync
   useShiftsSync();
   useUserSettingsSync();
+
+  // Apply theme
+  useEffect(() => {
+    const applyTheme = () => {
+      const preference = userSettings.themePreference;
+      const htmlElement = document.documentElement;
+
+      if (preference === "system") {
+        // Follow system preference
+        const prefersDark = window.matchMedia(
+          "(prefers-color-scheme: dark)",
+        ).matches;
+        if (prefersDark) {
+          htmlElement.classList.add("dark");
+        } else {
+          htmlElement.classList.remove("dark");
+        }
+      } else if (preference === "dark") {
+        htmlElement.classList.add("dark");
+      } else {
+        htmlElement.classList.remove("dark");
+      }
+    };
+
+    applyTheme();
+
+    // Listen to system theme changes when preference is "system"
+    if (userSettings.themePreference === "system") {
+      const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
+      const handleChange = () => applyTheme();
+      mediaQuery.addEventListener("change", handleChange);
+      return () => mediaQuery.removeEventListener("change", handleChange);
+    }
+  }, [userSettings.themePreference]);
 
   // Initialize app on mount
   useEffect(() => {

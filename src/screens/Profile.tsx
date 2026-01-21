@@ -3,6 +3,7 @@ import { Button, Card, Input } from "../components";
 import { useUserStore } from "../store";
 import type { UserSettings } from "../store/types";
 import { getTelegramUser } from "../utils/telegram";
+import { saveThemePreference } from "../utils/supabase";
 
 export default function Profile() {
   const userSettings = useUserStore((state: any) => state.settings);
@@ -44,6 +45,17 @@ export default function Profile() {
     }));
   };
 
+  const handleThemeChange = async (
+    theme: "light" | "dark" | "system",
+  ) => {
+    setFormData((prev) => ({
+      ...prev,
+      themePreference: theme,
+    }));
+    updateSettings({ themePreference: theme });
+    await saveThemePreference(theme);
+  };
+
   const handleSave = async () => {
     setIsSaving(true);
     try {
@@ -59,7 +71,7 @@ export default function Profile() {
   };
 
   return (
-    <div className="min-h-screen bg-white p-4 pb-safe pl-safe pr-safe">
+    <div className="min-h-screen bg-white dark:bg-gray-950 p-4 pb-safe pl-safe pr-safe">
       <div className="max-w-md mx-auto">
         {/* Header with Telegram Profile */}
         <div className="mb-8">
@@ -246,9 +258,67 @@ export default function Profile() {
           </div>
         </Card>
 
+        {/* Theme Section */}
+        <Card variant="elevated" className="mb-6">
+          <div className="flex items-center gap-2 mb-4">
+            <div className="p-2 bg-yellow-100 rounded-lg">
+              <svg
+                className="w-5 h-5 text-yellow-600"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <circle cx="12" cy="12" r="5" />
+                <line x1="12" y1="1" x2="12" y2="3" />
+                <line x1="12" y1="21" x2="12" y2="23" />
+                <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
+                <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
+                <line x1="1" y1="12" x2="3" y2="12" />
+                <line x1="21" y1="12" x2="23" y2="12" />
+                <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
+                <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
+              </svg>
+            </div>
+            <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+              Тема
+            </h3>
+          </div>
+
+          <div className="space-y-2">
+            {[
+              { value: "light" as const, label: "☀️ Светлая" },
+              { value: "dark" as const, label: "🌙 Тёмная" },
+              { value: "system" as const, label: "⚙️ Система" },
+            ].map((option) => (
+              <button
+                key={option.value}
+                onClick={() => handleThemeChange(option.value)}
+                className={`w-full p-3 rounded-lg border-2 transition-all ${
+                  formData.themePreference === option.value
+                    ? "border-yellow-400 bg-yellow-50 dark:bg-yellow-900/20"
+                    : "border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600"
+                }`}
+              >
+                <span
+                  className={`text-sm font-semibold ${
+                    formData.themePreference === option.value
+                      ? "text-yellow-700 dark:text-yellow-400"
+                      : "text-gray-700 dark:text-gray-300"
+                  }`}
+                >
+                  {option.label}
+                </span>
+              </button>
+            ))}
+          </div>
+        </Card>
+
         {/* Success Message */}
         {saveSuccess && (
-          <div className="mb-4 p-3 bg-green-100 border border-green-300 text-green-800 rounded text-sm text-center font-semibold flex items-center justify-center gap-2">
+          <div className="mb-4 p-3 bg-green-100 dark:bg-green-900/30 border border-green-300 dark:border-green-700 text-green-800 dark:text-green-300 rounded text-sm text-center font-semibold flex items-center justify-center gap-2">
             <svg
               className="w-4 h-4"
               viewBox="0 0 24 24"
@@ -269,7 +339,7 @@ export default function Profile() {
           onClick={handleSave}
           isLoading={isSaving}
           size="lg"
-          className="w-full bg-gray-900 text-white"
+          className="w-full bg-gray-900 dark:bg-gray-700 text-white hover:bg-gray-800 dark:hover:bg-gray-600"
         >
           Сохранить параметры
         </Button>

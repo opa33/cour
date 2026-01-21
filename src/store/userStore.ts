@@ -12,6 +12,7 @@ const DEFAULT_SETTINGS: UserSettings = {
   fuelTrackingEnabled: false,
   leaderboardOptIn: false,
   earningsGoal: 10000,
+  themePreference: "system",
 };
 
 interface UserStore {

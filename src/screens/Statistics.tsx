@@ -151,7 +151,7 @@ export default function Statistics() {
   };
 
   return (
-    <div className="min-h-screen bg-white p-4 pb-safe pl-safe pr-safe">
+    <div className="min-h-screen bg-white dark:bg-gray-950 p-4 pb-safe pl-safe pr-safe">
       <div className="max-w-md mx-auto">
         {/* Header */}
         <div className="mb-6">

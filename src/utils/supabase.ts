@@ -509,3 +509,38 @@ export const getDiagnosticInfo = () => {
     })(),
   };
 };
+
+/**
+ * Save theme preference to Supabase (part of settings JSONB)
+ */
+export const saveThemePreference = async (
+  themePreference: "light" | "dark" | "system",
+) => {
+  if (!isSupabaseConfigured()) {
+    console.warn("⚠️ Supabase not configured");
+    return null;
+  }
+
+  try {
+    const userId = getCurrentUserId();
+    console.log("🎨 Saving theme preference:", themePreference);
+
+    const { data, error } = await supabase
+      .from("users")
+      .update({
+        settings: {
+          themePreference,
+        },
+      })
+      .eq("telegram_id", userId)
+      .select()
+      .single();
+
+    if (error) throw error;
+    console.log("✅ Theme preference saved");
+    return data;
+  } catch (error) {
+    console.error("❌ Failed to save theme preference:", error);
+    return null;
+  }
+};

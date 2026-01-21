@@ -9,6 +9,7 @@ export interface UserSettings {
   fuelTrackingEnabled: boolean;
   leaderboardOptIn: boolean;
   earningsGoal: number;
+  themePreference: "light" | "dark" | "system";
 }
 
 export interface ShiftRecord {
