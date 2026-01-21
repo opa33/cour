@@ -58,3 +58,15 @@ export const parseTimeToMinutes = (timeString: string): number => {
   const [hours, minutes] = timeString.split(":").map(Number);
   return hours * 60 + (minutes || 0);
 };
+
+/**
+ * Format month and year as readable string (YYYY-MM → "январь 2026")
+ */
+export const formatMonthYear = (monthString: string): string => {
+  const [year, month] = monthString.split("-").map(Number);
+  const date = new Date(year, month - 1, 1);
+  return new Intl.DateTimeFormat("ru-RU", {
+    month: "long",
+    year: "numeric",
+  }).format(date);
+};

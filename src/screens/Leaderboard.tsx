@@ -1,10 +1,8 @@
 import { useState, useMemo, useEffect } from "react";
-import { Card, StatCard } from "../components";
+import { Card } from "../components";
 import { useShiftsStore, useUserStore } from "../store";
-import { formatCurrency } from "../utils/formatting";
+import { formatCurrency, formatMonthYear } from "../utils/formatting";
 import { getLeaderboard, isSupabaseConfigured } from "../utils/supabase";
-
-type PeriodType = "day" | "week" | "month";
 
 interface LeaderboardEntry {
   rank: number;
@@ -20,105 +18,181 @@ export default function Leaderboard() {
     (state: any) => state.settings.leaderboardOptIn,
   );
 
-  const [periodType, setPeriodType] = useState<PeriodType>("week");
+  // Month navigation state
+  const [displayMonth, setDisplayMonth] = useState<string>(
+    new Date().toISOString().slice(0, 7),
+  ); // YYYY-MM
+
   const [leaderboardData, setLeaderboardData] = useState<LeaderboardEntry[]>(
     [],
   );
-
-  // Mock data for other couriers (fallback when Supabase disabled)
-  // REMOVED: Only use real data from Supabase now
-  // const mockCouriers = [...];
+  const [previousMonthData, setPreviousMonthData] = useState<
+    LeaderboardEntry[]
+  >([]);
+  const [isLoading, setIsLoading] = useState(false);
 
   // Get current user data
   const currentUserId =
     localStorage.getItem("courier-finance:user-id") || "dev";
-  // const currentUsername = localStorage.getItem("currentUsername") || "Вы"; // Removed - not used
 
-  // Calculate period earnings for current user
-  const getPeriodEarnings = (): [string, string] => {
-    const today = new Date();
+  // Parse display month
+  const [displayYear, displayMonthNum] = useMemo(
+    () =>
+      displayMonth.split("-").map((v) => parseInt(v, 10)) as [number, number],
+    [displayMonth],
+  );
 
-    switch (periodType) {
-      case "day": {
-        const dateStr = today.toISOString().split("T")[0];
-        return [dateStr, dateStr];
-      }
+  // Calculate month start and end dates
+  const monthStart = useMemo(
+    () =>
+      `${String(displayYear).padStart(4, "0")}-${String(displayMonthNum).padStart(2, "0")}-01`,
+    [displayYear, displayMonthNum],
+  );
 
-      case "week": {
-        const weekStart = new Date(today);
-        weekStart.setDate(today.getDate() - today.getDay());
-        const weekEnd = new Date(weekStart);
-        weekEnd.setDate(weekStart.getDate() + 6);
-        return [
-          weekStart.toISOString().split("T")[0],
-          weekEnd.toISOString().split("T")[0],
-        ];
-      }
+  const monthEnd = useMemo(
+    () => new Date(displayYear, displayMonthNum, 0).toISOString().split("T")[0],
+    [displayYear, displayMonthNum],
+  );
 
-      case "month": {
-        const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
-        const monthEnd = new Date(today.getFullYear(), today.getMonth() + 1, 0);
-        return [
-          monthStart.toISOString().split("T")[0],
-          monthEnd.toISOString().split("T")[0],
-        ];
-      }
+  // Calculate previous month dates
+  const previousMonthStart = useMemo(() => {
+    const prevDate = new Date(displayYear, displayMonthNum - 2, 1);
+    return `${String(prevDate.getFullYear()).padStart(4, "0")}-${String(prevDate.getMonth() + 1).padStart(2, "0")}-01`;
+  }, [displayYear, displayMonthNum]);
 
-      default:
-        return [
-          today.toISOString().split("T")[0],
-          today.toISOString().split("T")[0],
-        ];
-    }
+  const previousMonthEnd = useMemo(
+    () =>
+      new Date(displayYear, displayMonthNum - 1, 0).toISOString().split("T")[0],
+    [displayYear, displayMonthNum],
+  );
+
+  // Navigation handlers
+  const handlePrevMonth = () => {
+    const date = new Date(displayYear, displayMonthNum - 2, 1);
+    const newMonth = String(date.getMonth() + 1).padStart(2, "0");
+    const newYear = date.getFullYear();
+    setDisplayMonth(`${newYear}-${newMonth}`);
   };
 
-  const [pStart, pEnd] = getPeriodEarnings();
+  const handleNextMonth = () => {
+    const date = new Date(displayYear, displayMonthNum, 1);
+    const newMonth = String(date.getMonth() + 1).padStart(2, "0");
+    const newYear = date.getFullYear();
+    setDisplayMonth(`${newYear}-${newMonth}`);
+  };
 
-  const currentUserEarnings = useMemo(() => {
-    return shifts
-      .filter((s: any) => s.date >= pStart && s.date <= pEnd)
-      .reduce((sum: number, s: any) => sum + s.totalWithoutTax, 0);
-  }, [shifts, pStart, pEnd]);
-
-  // Generate mock earnings for other couriers (varied amounts)
-  // REMOVED: No longer generating mock data, using only Supabase data
-  // const generateMockLeaderboard = (): void => { ... };
+  const handleToday = () => {
+    const today = new Date().toISOString().split("T")[0];
+    setDisplayMonth(today.slice(0, 7));
+  };
 
   // Load leaderboard data from Supabase
   useEffect(() => {
     const loadLeaderboard = async () => {
       try {
+        setIsLoading(true);
         if (isSupabaseConfigured()) {
-          // Load from Supabase
-          const data = await getLeaderboard(pStart, pEnd, 5);
-
-          if (data && data.length > 0) {
-            const entries = data.map((item: any) => ({
+          // Load current month data
+          const currentData = await getLeaderboard(monthStart, monthEnd, 100);
+          if (currentData && currentData.length > 0) {
+            const entries = currentData.map((item: any) => ({
               rank: item.rank,
               userId: item.telegram_id,
               username: item.username,
               earnings: item.total_earnings,
             }));
             setLeaderboardData(entries);
-            return;
+          } else {
+            setLeaderboardData([]);
           }
-        }
 
-        // No data available - show empty leaderboard
-        console.log("⚠️ No leaderboard data available from Supabase");
-        setLeaderboardData([]);
+          // Load previous month data for comparison
+          const prevData = await getLeaderboard(
+            previousMonthStart,
+            previousMonthEnd,
+            100,
+          );
+          if (prevData && prevData.length > 0) {
+            const entries = prevData.map((item: any) => ({
+              rank: item.rank,
+              userId: item.telegram_id,
+              username: item.username,
+              earnings: item.total_earnings,
+            }));
+            setPreviousMonthData(entries);
+          } else {
+            setPreviousMonthData([]);
+          }
+        } else {
+          setLeaderboardData([]);
+          setPreviousMonthData([]);
+        }
       } catch (error) {
         console.error("Failed to load leaderboard:", error);
         setLeaderboardData([]);
+        setPreviousMonthData([]);
+      } finally {
+        setIsLoading(false);
       }
     };
 
     loadLeaderboard();
-  }, [pStart, pEnd]);
+  }, [monthStart, monthEnd, previousMonthStart, previousMonthEnd]);
 
-  const topCouriers = leaderboardData.slice(0, 5);
+  // Calculate current user stats
+  const currentUserEarnings = useMemo(() => {
+    return shifts
+      .filter((s: any) => s.date >= monthStart && s.date <= monthEnd)
+      .reduce((sum: number, s: any) => sum + s.totalWithoutTax, 0);
+  }, [shifts, monthStart, monthEnd]);
 
-  // Medal emojis for top 3
+  const currentUserRank = useMemo(() => {
+    return (
+      leaderboardData.find((e) => e.userId === currentUserId)?.rank || null
+    );
+  }, [leaderboardData, currentUserId]);
+
+  const gapToLeader = useMemo(() => {
+    if (leaderboardData.length === 0) return 0;
+    return leaderboardData[0].earnings - currentUserEarnings;
+  }, [leaderboardData, currentUserEarnings]);
+
+  // Calculate rank change compared to previous month
+  const getRankChange = (
+    userId: string,
+  ): { change: number; isNew: boolean } => {
+    const currentRank = leaderboardData.find((e) => e.userId === userId)?.rank;
+    const previousRank = previousMonthData.find(
+      (e) => e.userId === userId,
+    )?.rank;
+
+    if (!currentRank) return { change: 0, isNew: false };
+    if (!previousRank) return { change: 0, isNew: true };
+
+    return { change: previousRank - currentRank, isNew: false };
+  };
+
+  // Get dynamic indicator (arrow and text)
+  const getDynamicIndicator = (userId: string): string => {
+    const { change, isNew } = getRankChange(userId);
+
+    if (isNew) return "🌟 Новичок";
+    if (change > 0) return `↑ +${change}`;
+    if (change < 0) return `↓ ${change}`;
+    return "─ Без изменений";
+  };
+
+  // Get dynamic color
+  const getDynamicColor = (userId: string): string => {
+    const { change, isNew } = getRankChange(userId);
+
+    if (isNew) return "text-blue-600";
+    if (change > 0) return "text-green-600";
+    if (change < 0) return "text-red-600";
+    return "text-gray-500";
+  };
+
+  // Get medal emoji
   const getMedal = (rank: number): string => {
     switch (rank) {
       case 1:
@@ -128,149 +202,242 @@ export default function Leaderboard() {
       case 3:
         return "🥉";
       default:
-        return `#${rank}`;
+        return "";
     }
   };
 
+  // Navigation icons
+  const NavIcons = {
+    prev: (
+      <svg
+        className="w-4 h-4"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
+        <polyline points="15 18 9 12 15 6" />
+      </svg>
+    ),
+    next: (
+      <svg
+        className="w-4 h-4"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
+        <polyline points="9 18 15 12 9 6" />
+      </svg>
+    ),
+    today: (
+      <svg
+        className="w-4 h-4"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
+        <rect x="3" y="4" width="18" height="18" rx="2" />
+        <line x1="16" y1="2" x2="16" y2="6" />
+        <line x1="8" y1="2" x2="8" y2="6" />
+        <line x1="3" y1="10" x2="21" y2="10" />
+        <circle cx="12" cy="15" r="2" />
+      </svg>
+    ),
+  };
+
   return (
-    <div className="min-h-screen bg-gray-50 p-4 pb-safe pl-safe pr-safe">
+    <div className="min-h-screen bg-white p-4 pb-safe pl-safe pr-safe overflow-x-hidden">
       <div className="max-w-md mx-auto">
         {/* Header */}
         <div className="mb-6">
-          <h1 className="text-3xl font-bold text-gray-800">🏆 Рейтинг</h1>
-          <p className="text-gray-600 text-sm mt-1">
-            Top-5 курьеров по заработку
+          <h1 className="text-2xl font-semibold text-gray-900">Рейтинг</h1>
+          <p className="text-sm text-gray-500 mt-1">
+            Лучшие курьеры месяца (кто спиздил больше всех)
           </p>
         </div>
 
-        {/* Period Selector */}
-        <Card variant="elevated" className="mb-4">
-          <div className="grid grid-cols-3 gap-2">
-            {(["day", "week", "month"] as PeriodType[]).map((period) => (
-              <button
-                key={period}
-                onClick={() => setPeriodType(period)}
-                className={`py-2 px-2 text-xs font-semibold rounded transition-colors ${
-                  periodType === period
-                    ? "bg-blue-500 text-white"
-                    : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-                }`}
-              >
-                {period === "day"
-                  ? "День"
-                  : period === "week"
-                    ? "Неделя"
-                    : "Месяц"}
-              </button>
-            ))}
+        {/* Month Navigation */}
+        <Card variant="elevated" className="mb-6">
+          <div className="flex items-center justify-between gap-2">
+            <button
+              onClick={handlePrevMonth}
+              className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+              title="Предыдущий месяц"
+            >
+              {NavIcons.prev}
+            </button>
+
+            <h3 className="text-sm font-semibold text-gray-800 flex-1 text-center">
+              {formatMonthYear(displayMonth)}
+            </h3>
+
+            <button
+              onClick={handleToday}
+              className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+              title="Перейти на текущий месяц"
+            >
+              <div className="flex flex-col items-center justify-center">
+                {NavIcons.today}
+                <p className="text-gray-700 text-xs">Сегодня</p>
+              </div>
+            </button>
+
+            <button
+              onClick={handleNextMonth}
+              className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+              title="Следующий месяц"
+            >
+              {NavIcons.next}
+            </button>
           </div>
         </Card>
 
         {/* Info Section */}
         {!leaderboardOptIn && (
-          <Card className="mb-4 bg-yellow-50 border border-yellow-200">
-            <p className="text-sm text-gray-700">
-              ℹ️{" "}
+          <Card className="mb-6 bg-amber-50 border border-amber-200">
+            <p className="text-sm text-amber-900">
               <span className="font-semibold">
                 Вы не участвуете в рейтинге.
               </span>{" "}
-              Включите опцию в профиле ⚙️
+              Включите опцию в профиле, чтобы появиться в топе.
             </p>
           </Card>
         )}
 
-        {/* Leaderboard */}
-        {topCouriers.length > 0 ? (
-          <Card variant="elevated" className="mb-4">
-            <h2 className="text-lg font-semibold text-gray-800 mb-4">ТОП-5</h2>
+        {/* Current User Card (Always Visible) */}
+        {leaderboardOptIn && (
+          <Card
+            variant="elevated"
+            className="mb-6 bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-300"
+          >
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex-1">
+                <p className="text-xs font-medium text-blue-600 mb-1">
+                  ВАШ РЕЗУЛЬТАТ
+                </p>
+                <p className="text-2xl font-bold text-blue-900">
+                  {formatCurrency(currentUserEarnings, currency)}
+                </p>
+                {currentUserRank && (
+                  <p className="text-xs text-blue-700 mt-1">
+                    #{currentUserRank} место в рейтинге
+                  </p>
+                )}
+              </div>
+              <div className="text-right">
+                {currentUserRank === 1 && <p className="text-3xl mb-1">🥇</p>}
+                {gapToLeader > 0 && currentUserRank !== 1 && (
+                  <div>
+                    <p className="text-xs text-blue-600 font-medium">
+                      До лидера
+                    </p>
+                    <p className="text-lg font-semibold text-blue-900">
+                      {formatCurrency(gapToLeader, currency)}
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </Card>
+        )}
+
+        {/* Leaderboard List */}
+        {isLoading ? (
+          <Card variant="elevated" className="text-center py-8">
+            <p className="text-gray-600">Загрузка рейтинга...</p>
+          </Card>
+        ) : leaderboardData.length > 0 ? (
+          <Card variant="elevated">
+            <h3 className="text-sm font-semibold text-gray-900 mb-4">
+              ТОП КУРЬЕРОВ
+            </h3>
             <div className="space-y-3">
-              {topCouriers.map((courier) => (
-                <div
-                  key={courier.userId}
-                  className={`p-4 rounded-lg flex items-center gap-3 transition-all ${
-                    courier.userId === currentUserId
-                      ? "bg-gradient-to-r from-blue-50 to-blue-100 border-2 border-blue-400 shadow-md"
-                      : "bg-white border border-gray-200 hover:shadow-md"
-                  }`}
-                >
-                  {/* Medal / Rank */}
-                  <div className="text-3xl font-bold w-12 text-center flex-shrink-0">
-                    {getMedal(courier.rank)}
-                  </div>
-
-                  {/* Avatar placeholder - would use photo_url from Telegram in production */}
-                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-gray-300 to-gray-400 flex items-center justify-center flex-shrink-0">
-                    <span className="text-lg">👤</span>
-                  </div>
-
-                  {/* User Info */}
-                  <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-gray-800 truncate">
-                      {courier.username}
-                      {courier.userId === currentUserId && (
-                        <span className="ml-1 text-xs bg-blue-500 text-white px-2 py-0.5 rounded">
-                          ВЫ
-                        </span>
+              {leaderboardData.map((courier) => {
+                const isCurrentUser = courier.userId === currentUserId;
+                return (
+                  <div
+                    key={courier.userId}
+                    className={`p-4 rounded-lg flex items-center gap-3 transition-all ${
+                      isCurrentUser
+                        ? "bg-blue-50 border-2 border-blue-300 shadow-sm"
+                        : "bg-gray-50 border border-gray-200"
+                    }`}
+                  >
+                    {/* Rank / Medal */}
+                    <div className="text-center w-12 flex-shrink-0">
+                      {courier.rank <= 3 ? (
+                        <div className="text-2xl">{getMedal(courier.rank)}</div>
+                      ) : (
+                        <div className="text-lg font-bold text-gray-500">
+                          #{courier.rank}
+                        </div>
                       )}
-                    </p>
-                    <p className="text-xs text-gray-600">
-                      #{courier.rank} место
-                    </p>
-                  </div>
+                    </div>
 
-                  {/* Earnings */}
-                  <div className="text-right flex-shrink-0">
-                    <p className="font-bold text-lg text-green-600">
-                      {formatCurrency(courier.earnings, currency)}
-                    </p>
-                    <p className="text-xs text-gray-500">{currency}</p>
+                    {/* Username */}
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-gray-900 truncate">
+                        {courier.username}
+                        {isCurrentUser && (
+                          <span className="ml-1 text-xs bg-blue-500 text-white px-2 py-0.5 rounded">
+                            ВЫ
+                          </span>
+                        )}
+                      </p>
+                      <div className="flex items-center gap-2 mt-1">
+                        <p className="text-xs text-gray-500">
+                          {courier.rank}
+                          {courier.rank === 1 && " место - Лидер! 🔥"}
+                          {courier.rank === 2 && " место"}
+                          {courier.rank === 3 && " место"}
+                          {courier.rank > 3 && " место"}
+                        </p>
+                        <span
+                          className={`text-xs font-semibold ${getDynamicColor(courier.userId)}`}
+                        >
+                          {getDynamicIndicator(courier.userId)}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Earnings */}
+                    <div className="text-right flex-shrink-0">
+                      <p
+                        className={`font-bold text-lg ${
+                          isCurrentUser ? "text-blue-700" : "text-green-600"
+                        }`}
+                      >
+                        {formatCurrency(courier.earnings, currency)}
+                      </p>
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </Card>
         ) : (
           <Card variant="elevated" className="text-center py-8 text-gray-600">
-            <p>Нет данных о заработках за выбранный период</p>
+            <p>Нет данных о курьерах за выбранный месяц</p>
           </Card>
         )}
 
-        {/* Stats */}
-        {leaderboardOptIn && (
-          <div className="space-y-3">
-            <StatCard
-              label="Ваш заработок"
-              value={currentUserEarnings}
-              unit={currency}
-              color="blue"
-              icon="💰"
-            />
-            {topCouriers[0]?.userId === currentUserId ? (
-              <StatCard
-                label="Вы в лидерах!"
-                value={topCouriers[0].earnings - currentUserEarnings}
-                unit={currency}
-                color="green"
-                icon="🎉"
-              />
-            ) : topCouriers.length > 0 ? (
-              <StatCard
-                label="До лидера"
-                value={topCouriers[0].earnings - currentUserEarnings}
-                unit={currency}
-                color="orange"
-                icon="📈"
-              />
-            ) : null}
-          </div>
+        {/* Stats Footer */}
+        {leaderboardData.length > 0 && (
+          <Card className="mt-6 bg-gray-50 text-xs text-gray-600">
+            <p>
+              📊 {leaderboardData.length} курьеров участвуют в рейтинге за{" "}
+              {formatMonthYear(displayMonth)}
+            </p>
+          </Card>
         )}
-
-        {/* Info Card */}
-        <Card className="text-xs text-gray-600 bg-gray-100 mt-4">
-          <p className="mt-1">
-            📱 Данные обновляются в реальном времени для участников рейтинга
-          </p>
-        </Card>
       </div>
     </div>
   );
