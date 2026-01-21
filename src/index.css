@@ -23,6 +23,7 @@ body,
   padding-top: max(0px, env(safe-area-inset-top));
   padding-left: max(0px, env(safe-area-inset-left));
   padding-right: max(0px, env(safe-area-inset-right));
+  overflow-x: hidden;
 }
 
 body {
@@ -44,6 +45,22 @@ textarea,
 select {
   font-size: 16px;
   font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", inherit;
+}
+
+/* iOS input styling */
+input[type="date"],
+input[type="time"],
+input[type="number"],
+input[type="text"] {
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+/* Remove spinner from number input on iOS */
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
 }
 
 /* Fix for notch on iPhone */

@@ -28,14 +28,34 @@ export default function Statistics() {
   const [selectedDate] = useState(new Date().toISOString().split("T")[0]);
   const [rangeStart, setRangeStart] = useState("");
   const [rangeEnd, setRangeEnd] = useState("");
+  const [displayMonth] = useState<string>(new Date().toISOString().slice(0, 7)); // YYYY-MM
   const [actionModalOpen, setActionModalOpen] = useState(false);
   const [selectedShiftForAction, setSelectedShiftForAction] = useState<
     string | null
   >(null);
 
-  // For day view - show only selected date or range
-  const pStart = rangeStart || selectedDate;
-  const pEnd = rangeEnd || selectedDate;
+  // Get month/year from displayMonth
+  const [displayYear, displayMonthNum] = useMemo(
+    () =>
+      displayMonth.split("-").map((v) => parseInt(v, 10)) as [number, number],
+    [displayMonth],
+  );
+
+  // Calculate month start and end dates
+  const monthStart = useMemo(
+    () =>
+      `${String(displayYear).padStart(4, "0")}-${String(displayMonthNum).padStart(2, "0")}-01`,
+    [displayYear, displayMonthNum],
+  );
+
+  const monthEnd = useMemo(
+    () => new Date(displayYear, displayMonthNum, 0).toISOString().split("T")[0],
+    [displayYear, displayMonthNum],
+  );
+
+  // For period view - use range if selected, otherwise use month
+  const pStart = rangeStart || monthStart;
+  const pEnd = rangeEnd || monthEnd;
 
   const periodShifts = useMemo(
     () => shifts.filter((s: any) => s.date >= pStart && s.date <= pEnd),
@@ -70,6 +90,17 @@ export default function Statistics() {
         0,
       ),
     [periodShifts],
+  );
+
+  // Calculate efficiency metrics
+  const incomePerHour = useMemo(
+    () => (totalMinutes > 0 ? (totalIncome / totalMinutes) * 60 : 0),
+    [totalIncome, totalMinutes],
+  );
+
+  const incomePerKm = useMemo(
+    () => (totalKm > 0 ? totalIncome / totalKm : 0),
+    [totalIncome, totalKm],
   );
 
   // Prepare chart data
@@ -256,6 +287,28 @@ export default function Statistics() {
             </div>
           </div>
         </Card>
+        
+        {/* Efficiency Metrics */}
+        {periodShifts.length > 0 && (
+          <div className="grid grid-cols-2 gap-2 mb-6">
+            <div className="bg-gradient-to-br from-purple-50 to-purple-100 p-3 rounded-lg border border-purple-200">
+              <p className="text-xs text-purple-600 font-medium mb-1">
+                Доход/час
+              </p>
+              <p className="text-lg font-semibold text-purple-900">
+                {formatCurrency(incomePerHour, currency)}
+              </p>
+            </div>
+            <div className="bg-gradient-to-br from-orange-50 to-orange-100 p-3 rounded-lg border border-orange-200">
+              <p className="text-xs text-orange-600 font-medium mb-1">
+                Доход/км
+              </p>
+              <p className="text-lg font-semibold text-orange-900">
+                {formatCurrency(incomePerKm, currency)}
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* Shifts List */}
         {periodShifts.length > 0 ? (

@@ -198,7 +198,7 @@ export default function ShiftCalculator() {
   }
 
   return (
-    <div className="min-h-screen bg-white p-4 pb-safe pl-safe pr-safe">
+    <div className="min-h-screen bg-white p-4 pb-safe pl-safe pr-safe overflow-x-hidden">
       <div className="max-w-md mx-auto">
         {/* Header */}
         <div className="mb-8">
@@ -224,7 +224,12 @@ export default function ShiftCalculator() {
                       : new Date().toISOString().split("T")[0]
                   }
                   onChange={(e) => handleInputChange("date", e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  style={{
+                    fontSize: "16px",
+                    WebkitAppearance: "none",
+                    borderWidth: "1px",
+                  }}
                 />
               </div>
 

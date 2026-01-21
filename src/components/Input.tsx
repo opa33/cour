@@ -20,12 +20,18 @@ export default function Input({
       )}
       <input
         className={`
-          px-3 py-2 border rounded-lg transition-colors
-          focus:outline-none focus:ring-2 focus:ring-blue-500
-          ${error ? "border-red-500 bg-red-50" : "border-gray-300 bg-white"}
+          px-3 py-2 border border-gray-300 rounded-lg transition-colors
+          focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent
+          ${error ? "border-red-500 bg-red-50" : "bg-white"}
           ${className}
         `}
-        style={{ fontSize: "16px" } as any}
+        style={
+          {
+            fontSize: "16px",
+            WebkitAppearance: "none",
+            borderWidth: "1px",
+          } as any
+        }
         {...props}
       />
       {error && <span className="text-sm text-red-500">{error}</span>}
