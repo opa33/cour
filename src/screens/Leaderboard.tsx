@@ -53,7 +53,7 @@ export default function Leaderboard() {
 
         if (isSupabaseConfigured()) {
           // Load current month data
-          const currentData = await getLeaderboard(monthStart, monthEnd, 5);
+          const currentData = await getLeaderboard(monthStart, monthEnd);
           console.log("📥 Received leaderboard data:", currentData);
 
           if (currentData && currentData.length > 0) {
@@ -98,28 +98,40 @@ export default function Leaderboard() {
     }
   };
 
-  const monthName = today.toLocaleString("ru-RU", {
-    month: "long",
-    year: "numeric",
-  });
-
   return (
-    <div className="min-h-screen bg-white dark:bg-gray-950 p-4 pb-safe pl-safe pr-safe overflow-x-hidden">
+    <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white p-4 pb-safe pl-safe pr-safe overflow-x-hidden">
       <div className="max-w-md mx-auto">
         {/* Header */}
         <div className="mb-6">
-          <h1 className="text-2xl font-semibold text-gray-900 dark:text-white">
-            Рейтинг
-          </h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-            Лучшие курьеры в {monthName}
+          <h1 className="text-3xl font-bold text-gray-900">Рейтинг</h1>
+          <p className="text-sm text-gray-600 mt-1">
+            Лучшие курьеры месяца (кто списал больше всех)
           </p>
         </div>
 
+        {/* Your Results Card */}
+        <Card className="mb-6 bg-gradient-to-br from-blue-100 to-blue-50 border-2 border-blue-200 shadow-sm">
+          <div className="text-center">
+            <p className="text-xs font-semibold text-blue-700 mb-2">
+              ВАШ РЕЗУЛЬТАТ
+            </p>
+            <p className="text-4xl font-bold text-blue-900">
+              {leaderboardData.length > 0
+                ? (() => {
+                    const userEarnings =
+                      leaderboardData.find((c) => c.userId === currentUserId)
+                        ?.earnings || 0;
+                    return formatCurrency(userEarnings, currency);
+                  })()
+                : "0 " + currency}
+            </p>
+          </div>
+        </Card>
+
         {/* Info Section */}
         {!leaderboardOptIn && (
-          <Card className="mb-6 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700">
-            <p className="text-sm text-amber-900 dark:text-amber-300">
+          <Card className="mb-6 bg-amber-50 border border-amber-200">
+            <p className="text-sm text-amber-900">
               <span className="font-semibold">
                 Вы не участвуете в рейтинге.
               </span>{" "}
@@ -131,49 +143,46 @@ export default function Leaderboard() {
         {/* Leaderboard List */}
         {isLoading ? (
           <Card variant="elevated" className="text-center py-8">
-            <p className="text-gray-600 dark:text-gray-400">
-              ⏳ Загрузка рейтинга...
-            </p>
+            <p className="text-gray-600">⏳ Загрузка рейтинга...</p>
           </Card>
         ) : leaderboardData.length > 0 ? (
           <Card variant="elevated">
-            <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-4">
-              ТОП КУРЬЕРОВ
-            </h3>
-            <div className="space-y-3">
+            <div className="space-y-2">
               {leaderboardData.map((courier) => {
                 const isCurrentUser = courier.userId === currentUserId;
                 return (
                   <div
                     key={courier.userId}
-                    className={`p-4 rounded-lg flex items-center gap-3 transition-all ${
+                    className={`p-3 rounded-lg flex items-center gap-3 transition-all ${
                       isCurrentUser
-                        ? "bg-blue-50 dark:bg-blue-900/30 border-2 border-blue-300 dark:border-blue-700 shadow-sm"
-                        : "bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600"
+                        ? "bg-blue-50 border-l-4 border-blue-400"
+                        : "bg-gray-50 border-l-4 border-gray-200 hover:bg-gray-100"
                     }`}
                   >
                     {/* Rank / Medal */}
-                    <div className="text-center w-12 flex-shrink-0">
+                    <div className="text-center w-8 flex-shrink-0">
                       {courier.rank <= 3 ? (
-                        <div className="text-2xl">{getMedal(courier.rank)}</div>
+                        <div className="text-xl">{getMedal(courier.rank)}</div>
                       ) : (
-                        <div className="text-lg font-bold text-gray-500 dark:text-gray-400">
+                        <div className="text-sm font-bold text-gray-500">
                           #{courier.rank}
                         </div>
                       )}
                     </div>
 
-                    {/* Username */}
+                    {/* Username & Status */}
                     <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-gray-900 dark:text-white truncate">
-                        {courier.username}
+                      <div className="flex items-center gap-2">
+                        <p className="font-medium text-gray-900 truncate">
+                          {courier.username}
+                        </p>
                         {isCurrentUser && (
-                          <span className="ml-1 text-xs bg-blue-500 dark:bg-blue-600 text-white px-2 py-0.5 rounded">
+                          <span className="text-xs bg-blue-500 text-white px-2 py-0.5 rounded-full whitespace-nowrap">
                             ВЫ
                           </span>
                         )}
-                      </p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                      </div>
+                      <p className="text-xs text-gray-500 mt-0.5">
                         {courier.rank === 1 && "🔥 Лидер месяца"}
                         {courier.rank === 2 && "🚀 На вершине"}
                         {courier.rank === 3 && "⭐ В топе"}
@@ -184,11 +193,7 @@ export default function Leaderboard() {
                     {/* Earnings */}
                     <div className="text-right flex-shrink-0">
                       <p
-                        className={`font-bold text-lg ${
-                          isCurrentUser
-                            ? "text-blue-700 dark:text-blue-300"
-                            : "text-green-600 dark:text-green-400"
-                        }`}
+                        className={`font-bold text-base ${isCurrentUser ? "text-blue-600" : "text-green-600"}`}
                       >
                         {formatCurrency(courier.earnings, currency)}
                       </p>
@@ -200,11 +205,9 @@ export default function Leaderboard() {
           </Card>
         ) : (
           <Card variant="elevated" className="text-center py-8">
-            <p className="text-gray-600 dark:text-gray-400 mb-2">📊</p>
-            <p className="text-gray-600 dark:text-gray-400">
-              Нет данных о курьерах
-            </p>
-            <p className="text-xs text-gray-500 dark:text-gray-500 mt-2">
+            <p className="text-gray-600 mb-2">📊</p>
+            <p className="text-gray-600 font-medium">Нет данных о курьерах</p>
+            <p className="text-xs text-gray-500 mt-2">
               Убедитесь, что у вас есть смены за этот месяц и вы включили
               участие в рейтинге
             </p>
@@ -213,10 +216,10 @@ export default function Leaderboard() {
 
         {/* Stats Footer */}
         {leaderboardData.length > 0 && (
-          <Card className="mt-6 bg-gray-50 dark:bg-gray-800 text-xs text-gray-600 dark:text-gray-400 text-center">
-            <p>
+          <Card className="mt-6 bg-blue-50 text-xs text-blue-700 text-center border border-blue-100">
+            <p className="font-medium">
               👥 {leaderboardData.length} курьер
-              {leaderboardData.length > 1 ? "ов" : ""} в рейтинге {monthName}
+              {leaderboardData.length > 1 ? "ов" : ""} в рейтинге
             </p>
           </Card>
         )}

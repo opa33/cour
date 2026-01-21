@@ -325,11 +325,7 @@ export const deleteShift = async (date: string) => {
 /**
  * Get leaderboard for a period (using direct SQL queries for reliability)
  */
-export const getLeaderboard = async (
-  startDate: string,
-  endDate: string,
-  limit: number = 5,
-) => {
+export const getLeaderboard = async (startDate: string, endDate: string) => {
   if (!isSupabaseConfigured()) {
     console.log("⚠️ Supabase not configured");
     return [];
@@ -411,14 +407,14 @@ export const getLeaderboard = async (
       optedInLeaderboard.sort(
         (a: any, b: any) => b.total_earnings - a.total_earnings,
       );
-      const finalLeaderboard = optedInLeaderboard
-        .slice(0, limit)
-        .map((item: any, idx: number) => ({
+      const finalLeaderboard = optedInLeaderboard.map(
+        (item: any, idx: number) => ({
           rank: idx + 1,
           telegram_id: item.telegram_id,
           username: item.username,
           total_earnings: item.total_earnings,
-        }));
+        }),
+      );
 
       console.log("✅ Final leaderboard:", finalLeaderboard);
       return finalLeaderboard;
