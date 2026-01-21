@@ -1,4 +1,19 @@
 /**
+ * Format minutes to "9 ч 40 мин" format
+ */
+export const formatMinutesReadable = (totalMinutes: number): string => {
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  if (hours === 0) {
+    return `${minutes} мин`;
+  }
+  if (minutes === 0) {
+    return `${hours} ч`;
+  }
+  return `${hours} ч ${minutes} мин`;
+};
+
+/**
  * Format number as currency with symbol
  */
 export const formatCurrency = (

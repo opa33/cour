@@ -8,7 +8,7 @@ const DEFAULT_SETTINGS: UserSettings = {
   priceZone3: 239,
   taxCoefficient: 0.9364,
   currency: "₽",
-  fuelTrackingEnabled: true,
+  fuelTrackingEnabled: false,
   leaderboardOptIn: false,
   earningsGoal: 10000,
 };

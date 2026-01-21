@@ -2,8 +2,11 @@ import { useMemo, useState } from "react";
 
 interface CalendarProps {
   shifts: Record<string, number>; // date -> netProfit
-  selectedDate: string;
-  onSelectDate: (date: string) => void;
+  selectedDate?: string;
+  onSelectDate?: (date: string) => void;
+  rangeStart?: string;
+  rangeEnd?: string;
+  onRangeChange?: (start: string, end: string) => void;
   maxValue?: number;
 }
 
@@ -11,12 +14,33 @@ export default function Calendar({
   shifts,
   selectedDate,
   onSelectDate,
+  rangeStart,
+  rangeEnd,
+  onRangeChange,
   maxValue = 5000,
 }: CalendarProps) {
   // State for month/year navigation
   const [displayMonth, setDisplayMonth] = useState<string>(
-    selectedDate.slice(0, 7),
+    selectedDate?.slice(0, 7) ||
+      rangeStart?.slice(0, 7) ||
+      new Date().toISOString().slice(0, 7),
   ); // YYYY-MM
+
+  // State for range selection
+  const [tempStart, setTempStart] = useState<string | null>(null);
+  const [tempEnd, setTempEnd] = useState<string | null>(null);
+  const isRangeMode = !!onRangeChange;
+
+  // Check if we should clear temp state
+  const shouldClearTemp = rangeStart === undefined && rangeEnd === undefined;
+
+  // Use provided range or temp state (cleared if external range is undefined)
+  const currentStart = rangeStart ?? (shouldClearTemp ? null : tempStart);
+  const currentEnd = rangeEnd ?? (shouldClearTemp ? null : tempEnd);
+
+  // Helper to get display state - resets temps when cleared
+  const displayStart = shouldClearTemp ? null : tempStart;
+  const displayEnd = shouldClearTemp ? null : tempEnd;
 
   // Parse display month
   const [displayYear, displayMonthNum] = displayMonth.split("-").map(Number);
@@ -39,7 +63,13 @@ export default function Calendar({
   const handleToday = () => {
     const today = new Date().toISOString().split("T")[0];
     setDisplayMonth(today.slice(0, 7));
-    onSelectDate(today);
+    if (isRangeMode) {
+      setTempStart(today);
+      setTempEnd(today);
+      onRangeChange?.(today, today);
+    } else {
+      onSelectDate?.(today);
+    }
   };
 
   // Memoize parsed date values for DISPLAYED month
@@ -92,22 +122,79 @@ export default function Calendar({
     return "bg-green-400 border-green-500";
   };
 
+  const isInRange = (dateStr: string): boolean => {
+    if (!currentStart || !currentEnd) return false;
+    const start = currentStart <= currentEnd ? currentStart : currentEnd;
+    const end = currentStart <= currentEnd ? currentEnd : currentStart;
+    return dateStr >= start && dateStr <= end;
+  };
+
+  const isRangeEdge = (dateStr: string): boolean => {
+    return dateStr === displayStart || dateStr === displayEnd;
+  };
+
   const weekDays = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"];
+
+  // Thin stroke SVG icons
+  const NavIcons = {
+    prev: (
+      <svg
+        className="w-4 h-4"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
+        <polyline points="15 18 9 12 15 6" />
+      </svg>
+    ),
+    next: (
+      <svg
+        className="w-4 h-4"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
+        <polyline points="9 18 15 12 9 6" />
+      </svg>
+    ),
+    today: (
+      <svg
+        className="w-4 h-4"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
+        <rect x="3" y="4" width="18" height="18" rx="2" />
+        <line x1="16" y1="2" x2="16" y2="6" />
+        <line x1="8" y1="2" x2="8" y2="6" />
+        <line x1="3" y1="10" x2="21" y2="10" />
+        <circle cx="12" cy="15" r="2" />
+      </svg>
+    ),
+  };
 
   return (
     <div className="w-full">
       {/* Month/Year Header with Navigation */}
-      <div className="flex items-center justify-between mb-4 gap-3">
+      <div className="flex items-center justify-between mb-4 gap-2">
         <button
           onClick={handlePrevMonth}
-          className="flex items-center gap-1 px-3 py-2 bg-gradient-to-r from-blue-500 to-blue-500 hover:from-blue-600 hover:to-blue-700 text-white rounded-lg text-sm font-semibold transition-all duration-200 shadow-md hover:shadow-lg hover:scale-105"
+          className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
           title="Предыдущий месяц"
         >
-          <span className="text-lg">←</span>
-          <span className="hidden sm:inline">Назад</span>
+          {NavIcons.prev}
         </button>
 
-        <h3 className="text-lg font-bold text-gray-800 min-w-48 text-center bg-gray-100 px-4 py-2 rounded-lg">
+        <h3 className="text-sm font-semibold text-gray-800 flex-1 text-center">
           {new Date(year, month - 1).toLocaleDateString("ru-RU", {
             month: "long",
             year: "numeric",
@@ -115,24 +202,22 @@ export default function Calendar({
         </h3>
 
         <button
-          onClick={handleNextMonth}
-          className="flex items-center gap-1 px-3 py-2 bg-gradient-to-r from-blue-500 to-blue-500 hover:from-blue-600 hover:to-blue-700 text-white rounded-lg text-sm font-semibold transition-all duration-200 shadow-md hover:shadow-lg hover:scale-105"
-          title="Следующий месяц"
-        >
-          <span className="hidden sm:inline">Вперед</span>
-          <span className="text-lg">→</span>
-        </button>
-      </div>
-
-      {/* Today Button */}
-      <div className="text-center mb-3">
-        <button
           onClick={handleToday}
-          className="inline-flex items-center gap-1 px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-500 hover:from-blue-600 hover:to-blue-700 text-white text-sm font-semibold rounded-lg transition-all duration-200 shadow-md hover:shadow-lg hover:scale-105"
+          className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
           title="Перейти на сегодня"
         >
-          <span>📅</span>
-          <span>Сегодня</span>
+          <div className="flex flex-col items-center justify-center">
+            {NavIcons.today}
+            <p className="text-gray-700 ml-1 text-xs">Сегодня</p>
+          </div>
+        </button>
+
+        <button
+          onClick={handleNextMonth}
+          className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+          title="Следующий месяц"
+        >
+          {NavIcons.next}
         </button>
       </div>
 
@@ -157,17 +242,55 @@ export default function Calendar({
 
           const dateStr = `${String(year).padStart(4, "0")}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
           const earnings = getEarnings(day);
-          const isSelected = selectedDate === dateStr;
+          const isSelectedSingle = selectedDate === dateStr;
+          const isInRangeMode = isRangeMode && isInRange(dateStr);
+          const isEdge = isRangeMode && isRangeEdge(dateStr);
           const color = getColor(earnings);
+
+          const handleDayClick = () => {
+            if (isRangeMode) {
+              // When resetting, clear temp state completely
+              if (shouldClearTemp) {
+                setTempStart(null);
+                setTempEnd(null);
+              }
+
+              if (!displayStart) {
+                setTempStart(dateStr);
+              } else if (!displayEnd) {
+                const start = displayStart <= dateStr ? displayStart : dateStr;
+                const end = displayStart <= dateStr ? dateStr : displayStart;
+                setTempStart(start);
+                setTempEnd(end);
+                onRangeChange?.(start, end);
+              } else {
+                // Reset and start new range
+                setTempStart(dateStr);
+                setTempEnd(null);
+              }
+            } else {
+              onSelectDate?.(dateStr);
+            }
+          };
 
           return (
             <button
               key={day}
-              onClick={() => onSelectDate(dateStr)}
+              onClick={handleDayClick}
               className={`
                 aspect-square rounded border-2 text-xs font-semibold transition-all duration-200
-                ${color}
-                ${isSelected ? "ring-2 ring-blue-500 scale-110" : "hover:scale-105"}
+                ${
+                  isRangeMode && isInRangeMode
+                    ? "bg-blue-100 border-blue-300"
+                    : color
+                }
+                ${
+                  isRangeMode && isEdge
+                    ? "ring-2 ring-blue-500 scale-110 bg-blue-200 border-blue-400"
+                    : isSelectedSingle
+                      ? "ring-2 ring-blue-500 scale-110"
+                      : "hover:scale-105"
+                }
                 ${earnings > 0 ? "cursor-pointer" : "cursor-default"}
                 flex flex-col items-center justify-center
               `}

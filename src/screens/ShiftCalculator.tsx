@@ -1,8 +1,86 @@
 import { useEffect, useState, useMemo } from "react";
-import { Button, Card, NumberInput, StatCard } from "../components";
+import { Button, Card, NumberInput } from "../components";
 import { calculateShift, type CalculationParams } from "../utils/calculations";
 import { useUserStore, useShiftsStore } from "../store";
 import { syncShift, isSupabaseConfigured } from "../utils/supabase";
+import { formatCurrency, formatMinutesReadable } from "../utils/formatting";
+
+// Thin stroke minimalist icons
+const ResultIcons = {
+  timeIncome: (
+    <svg
+      className="w-5 h-5"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <circle cx="12" cy="12" r="10" />
+      <polyline points="12 6 12 12 16 14" />
+    </svg>
+  ),
+  ordersIncome: (
+    <svg
+      className="w-5 h-5"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <circle cx="9" cy="21" r="1" />
+      <circle cx="20" cy="21" r="1" />
+      <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" />
+    </svg>
+  ),
+  totalWithTax: (
+    <svg
+      className="w-5 h-5"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <line x1="12" y1="1" x2="12" y2="23" />
+      <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+    </svg>
+  ),
+  netIncome: (
+    <svg
+      className="w-5 h-5"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+      <path d="M8 15l-2 6M16 15l2 6" />
+    </svg>
+  ),
+  netProfit: (
+    <svg
+      className="w-5 h-5"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <line x1="12" y1="1" x2="12" y2="23" />
+      <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+      <polyline points="3 12 1 14 3 16" />
+      <polyline points="21 12 23 14 21 16" />
+    </svg>
+  ),
+};
 
 export default function ShiftCalculator() {
   const userSettings = useUserStore((state: any) => state.settings);
@@ -120,162 +198,289 @@ export default function ShiftCalculator() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4 pb-safe pl-safe pr-safe">
+    <div className="min-h-screen bg-white p-4 pb-safe pl-safe pr-safe">
       <div className="max-w-md mx-auto">
         {/* Header */}
-        <div className="mb-6">
-          <h1 className="text-stone-700 text-2xl font-semibold mt-1">
-            {isEditMode
-              ? "✏️ Редактирование смены"
-              : "Расчёт заработка за смену"}
+        <div className="mb-8">
+          <h1 className="text-2xl font-semibold text-gray-900">
+            {isEditMode ? "Внесение смены" : "Расчёт смены"}
           </h1>
         </div>
 
-        {/* Input Form Card */}
-        <Card variant="elevated" className="mb-6">
-          <div className="space-y-4">
-            {/* Date */}
-            <div>
-              <label className="text-sm font-semibold text-gray-700 block mb-1">
-                Дата
-              </label>
-              <input
-                type="date"
-                value={
-                  currentShift?.date?.match(/^\d{4}-\d{2}-\d{2}$/)
-                    ? currentShift.date
-                    : new Date().toISOString().split("T")[0]
+        {/* Input Form Card - Hidden when showing results */}
+        {!showResult && (
+          <Card variant="elevated" className="mb-6">
+            <div className="space-y-4">
+              {/* Date */}
+              <div>
+                <label className="text-sm font-semibold text-gray-700 block mb-1">
+                  Дата
+                </label>
+                <input
+                  type="date"
+                  value={
+                    currentShift?.date?.match(/^\d{4}-\d{2}-\d{2}$/)
+                      ? currentShift.date
+                      : new Date().toISOString().split("T")[0]
+                  }
+                  onChange={(e) => handleInputChange("date", e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              {/* Minutes */}
+              <NumberInput
+                label="Минуты работы"
+                type="number"
+                min={0}
+                value={currentShift.minutes || ""}
+                onChange={(e) => handleInputChange("minutes", e.target.value)}
+                placeholder="480"
+              />
+
+              {/* Zone Orders */}
+              <div className="grid grid-cols-3 gap-2">
+                <NumberInput
+                  label="Зона 1"
+                  type="number"
+                  min={0}
+                  value={currentShift.zone1 || ""}
+                  onChange={(e) => handleInputChange("zone1", e.target.value)}
+                />
+                <NumberInput
+                  label="Зона 2"
+                  type="number"
+                  min={0}
+                  value={currentShift.zone2 || ""}
+                  onChange={(e) => handleInputChange("zone2", e.target.value)}
+                />
+                <NumberInput
+                  label="Зона 3"
+                  type="number"
+                  min={0}
+                  value={currentShift.zone3 || ""}
+                  onChange={(e) => handleInputChange("zone3", e.target.value)}
+                />
+              </div>
+
+              {/* Kilometers */}
+              <NumberInput
+                label="Километраж"
+                type="number"
+                min={0}
+                value={currentShift.kilometers || ""}
+                onChange={(e) =>
+                  handleInputChange("kilometers", e.target.value)
                 }
-                onChange={(e) => handleInputChange("date", e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="82"
               />
+
+              {/* Fuel Cost */}
+              {userSettings.fuelTrackingEnabled && (
+                <NumberInput
+                  label="Бензин (₽)"
+                  type="number"
+                  min={0}
+                  value={currentShift.fuelCost || ""}
+                  onChange={(e) =>
+                    handleInputChange("fuelCost", e.target.value)
+                  }
+                  placeholder="1000"
+                />
+              )}
+
+              {/* Calculate Button */}
+              <Button
+                onClick={handleCalculate}
+                size="lg"
+                className="w-full mt-6 bg-gray-900 text-white"
+              >
+                Рассчитать
+              </Button>
             </div>
-
-            {/* Minutes */}
-            <NumberInput
-              label="Минуты работы"
-              type="number"
-              min={0}
-              value={currentShift.minutes || ""}
-              onChange={(e) => handleInputChange("minutes", e.target.value)}
-              placeholder="480"
-            />
-
-            {/* Zone Orders */}
-            <div className="grid grid-cols-3 gap-2">
-              <NumberInput
-                label="Зона 1"
-                type="number"
-                min={0}
-                value={currentShift.zone1 || ""}
-                onChange={(e) => handleInputChange("zone1", e.target.value)}
-              />
-              <NumberInput
-                label="Зона 2"
-                type="number"
-                min={0}
-                value={currentShift.zone2 || ""}
-                onChange={(e) => handleInputChange("zone2", e.target.value)}
-              />
-              <NumberInput
-                label="Зона 3"
-                type="number"
-                min={0}
-                value={currentShift.zone3 || ""}
-                onChange={(e) => handleInputChange("zone3", e.target.value)}
-              />
-            </div>
-
-            {/* Kilometers */}
-            <NumberInput
-              label="Километраж"
-              type="number"
-              min={0}
-              value={currentShift.kilometers || ""}
-              onChange={(e) => handleInputChange("kilometers", e.target.value)}
-              placeholder="82"
-            />
-
-            {/* Fuel Cost */}
-            {userSettings.fuelTrackingEnabled && (
-              <NumberInput
-                label="Бензин (₽)"
-                type="number"
-                min={0}
-                value={currentShift.fuelCost || ""}
-                onChange={(e) => handleInputChange("fuelCost", e.target.value)}
-                placeholder="1000"
-              />
-            )}
-
-            {/* Calculate Button */}
-            <Button onClick={handleCalculate} size="lg" className="w-full mt-6">
-              Рассчитать
-            </Button>
-          </div>
-        </Card>
+          </Card>
+        )}
 
         {/* Results Section */}
         {showResult && calculationResult && (
-          <Card variant="elevated" className="mb-6">
-            <h2 className="text-xl font-bold text-gray-800 mb-4">Результаты</h2>
-
-            <div className="space-y-3">
-              {/* Time Income */}
-              <StatCard
-                label="Доход за время"
-                value={calculationResult.timeIncome}
-                unit={userSettings.currency}
-                color="blue"
-              />
-
-              {/* Orders Income */}
-              <StatCard
-                label="Доход за заказы"
-                value={calculationResult.ordersIncome}
-                unit={userSettings.currency}
-                color="blue"
-              />
-
-              {/* Total With Tax */}
-              <StatCard
-                label="Итого с налогом"
-                value={calculationResult.totalWithTax}
-                unit={userSettings.currency}
-                color="orange"
-              />
-
-              {/* Total Without Tax */}
-              <StatCard
-                label="Итого без налога"
-                value={calculationResult.totalWithoutTax}
-                unit={userSettings.currency}
-                color="green"
-              />
-
-              {/* Net Profit */}
-              <StatCard
-                label={
-                  userSettings.fuelTrackingEnabled
-                    ? "Чистая прибыль"
-                    : "Прибыль"
-                }
-                value={calculationResult.netProfit}
-                unit={userSettings.currency}
-                color={calculationResult.netProfit > 0 ? "green" : "red"}
-                icon={calculationResult.netProfit > 0 ? "💰" : "⚠️"}
-              />
+          <>
+            {/* Income Stats - Minimalist Style */}
+            <div className="space-y-2 mb-6">
+              <div className="flex justify-left gap-2">
+                <div className="bg-gray-50 p-4 rounded-lg border border-gray-100">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="text-gray-400">
+                      {ResultIcons.timeIncome}
+                    </div>
+                    <p className="text-xs text-gray-500 font-medium">
+                      За время
+                    </p>
+                  </div>
+                  <p className="text-2xl font-semibold text-gray-900">
+                    {formatCurrency(
+                      calculationResult.timeIncome,
+                      userSettings.currency,
+                    )}
+                  </p>
+                </div>
+                <div className="bg-gray-50 p-4 rounded-lg border border-gray-100">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="text-gray-400">
+                      {ResultIcons.ordersIncome}
+                    </div>
+                    <p className="text-xs text-gray-500 font-medium">
+                      За заказы
+                    </p>
+                  </div>
+                  <p className="text-2xl font-semibold text-gray-900">
+                    {formatCurrency(
+                      calculationResult.ordersIncome,
+                      userSettings.currency,
+                    )}
+                  </p>
+                </div>
+              </div>
+              <div className="bg-white p-4 rounded-lg border border-gray-200">
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="text-gray-400">
+                    {ResultIcons.totalWithTax}
+                  </div>
+                  <p className="text-xs text-gray-500 font-medium">
+                    Доход с налогом
+                  </p>
+                </div>
+                <p className="text-2xl font-semibold text-red-700">
+                  {formatCurrency(
+                    calculationResult.totalWithTax,
+                    userSettings.currency,
+                  )}
+                </p>
+              </div>
+              <div className="bg-white p-4 rounded-lg border border-gray-200">
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="text-gray-400">{ResultIcons.netIncome}</div>
+                  <p className="text-xs text-gray-500 font-medium">
+                    Доход (чистый)
+                  </p>
+                </div>
+                <p className="text-2xl font-semibold text-green-700">
+                  {formatCurrency(
+                    calculationResult.totalWithoutTax,
+                    userSettings.currency,
+                  )}
+                </p>
+              </div>
+              {userSettings.fuelTrackingEnabled && (
+                <div
+                  className={`p-4 rounded-lg border ${
+                    calculationResult.netProfit > 0
+                      ? "bg-white border-gray-200"
+                      : "bg-red-50 border-red-200"
+                  }`}
+                >
+                  <div className="flex items-center gap-2 mb-2">
+                    <div
+                      className={`${
+                        calculationResult.netProfit > 0
+                          ? "text-gray-400"
+                          : "text-red-400"
+                      }`}
+                    >
+                      {ResultIcons.netProfit}
+                    </div>
+                    <p
+                      className={`text-xs font-medium ${
+                        calculationResult.netProfit > 0
+                          ? "text-gray-500"
+                          : "text-red-600"
+                      }`}
+                    >
+                      Чистая прибыль
+                    </p>
+                  </div>
+                  <p
+                    className={`text-2xl font-semibold ${
+                      calculationResult.netProfit > 0
+                        ? "text-green-700"
+                        : "text-red-600"
+                    }`}
+                  >
+                    {formatCurrency(
+                      calculationResult.netProfit,
+                      userSettings.currency,
+                    )}
+                  </p>
+                </div>
+              )}
             </div>
+
+            {/* Details Card */}
+            <Card variant="elevated" className="mb-6">
+              <h3 className="text-sm font-semibold text-gray-900 mb-4 uppercase tracking-wide">
+                Детали смены
+              </h3>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="bg-gray-50 p-3 rounded-lg">
+                  <p className="text-xs text-gray-500 mb-1 font-medium">
+                    Время работы
+                  </p>
+                  <p className="text-lg font-semibold text-gray-900">
+                    {formatMinutesReadable(currentShift.minutes)}
+                  </p>
+                </div>
+                <div className="bg-gray-50 p-3 rounded-lg">
+                  <p className="text-xs text-gray-500 mb-1 font-medium">
+                    Заказов
+                  </p>
+                  <p className="text-lg font-semibold text-gray-900">
+                    {currentShift.zone1 +
+                      currentShift.zone2 +
+                      currentShift.zone3}
+                  </p>
+                </div>
+                <div className="bg-gray-50 p-3 rounded-lg">
+                  <p className="text-xs text-gray-500 mb-1 font-medium">
+                    Километры
+                  </p>
+                  <p className="text-lg font-semibold text-gray-900">
+                    {currentShift.kilometers} км
+                  </p>
+                </div>
+                <div className="bg-gray-50 p-3 rounded-lg">
+                  <p className="text-xs text-gray-500 mb-1 font-medium">
+                    Бензин
+                  </p>
+                  <p className="text-lg font-semibold text-gray-900">
+                    {formatCurrency(
+                      currentShift.fuelCost,
+                      userSettings.currency,
+                    )}
+                  </p>
+                </div>
+              </div>
+            </Card>
 
             {/* Save Button */}
             <Button
               onClick={handleSave}
               isLoading={isSaving}
               size="lg"
-              variant="success"
-              className="w-full mt-6"
+              className="w-full bg-gray-900 text-white"
             >
-              {isEditMode ? "💾 Обновить" : "💾 Сохранить"}
+              {isEditMode ? "Обновить" : "Сохранить"}
+            </Button>
+
+            {/* Back/Cancel Button */}
+            <Button
+              onClick={() => {
+                setShowResult(false);
+                setCalculationResult(null);
+              }}
+              size="lg"
+              variant="outline"
+              className="w-full mt-2"
+            >
+              Назад
             </Button>
 
             {/* Cancel Button for edit mode */}
@@ -286,29 +491,11 @@ export default function ShiftCalculator() {
                 variant="outline"
                 className="w-full mt-2"
               >
-                ❌ Отмена
+                Отмена
               </Button>
             )}
-          </Card>
+          </>
         )}
-
-        {/* Quick Settings Info */}
-        <Card className="text-sm text-gray-600 bg-gray-100">
-          <p>
-            📋 <span className="font-semibold">Текущие тарифы:</span>
-          </p>
-          <p>
-            • За минуту: {userSettings.ratePerMinute} {userSettings.currency}
-          </p>
-          <p>
-            • Зона 1: {userSettings.priceZone1}, Зона 2:{" "}
-            {userSettings.priceZone2}, Зона 3: {userSettings.priceZone3}{" "}
-            {userSettings.currency}
-          </p>
-          <p>
-            • Налог: {((1 - userSettings.taxCoefficient) * 100).toFixed(2)}%
-          </p>
-        </Card>
       </div>
     </div>
   );

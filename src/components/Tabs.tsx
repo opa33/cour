@@ -10,15 +10,17 @@ interface TabsProps {
   onChange: (tabId: string) => void;
 }
 
-// SVG icons - minimalist, black & white
+// SVG icons - thin stroke minimalist style
 const TabIcons: Record<string, React.ReactNode> = {
   calculator: (
     <svg
-      className="w-6 h-6"
+      className="w-5 h-5"
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
-      strokeWidth="2"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
     >
       <rect x="4" y="2" width="16" height="20" rx="2" />
       <rect x="6" y="4" width="12" height="4" rx="1" />
@@ -29,11 +31,13 @@ const TabIcons: Record<string, React.ReactNode> = {
   ),
   statistics: (
     <svg
-      className="w-6 h-6"
+      className="w-5 h-5"
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
-      strokeWidth="2"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
     >
       <line x1="12" y1="2" x2="12" y2="22" />
       <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
@@ -41,11 +45,13 @@ const TabIcons: Record<string, React.ReactNode> = {
   ),
   leaderboard: (
     <svg
-      className="w-6 h-6"
+      className="w-5 h-5"
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
-      strokeWidth="2"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
     >
       <polyline points="12 3 20 7 20 17 12 21 4 17 4 7 12 3" />
       <line x1="12" y1="12" x2="20" y2="7" />
@@ -55,11 +61,13 @@ const TabIcons: Record<string, React.ReactNode> = {
   ),
   profile: (
     <svg
-      className="w-6 h-6"
+      className="w-5 h-5"
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
-      strokeWidth="2"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
     >
       <circle cx="12" cy="8" r="4" />
       <path d="M6 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2" />
@@ -70,7 +78,7 @@ const TabIcons: Record<string, React.ReactNode> = {
 export default function Tabs({ tabs, activeTab, onChange }: TabsProps) {
   return (
     <div
-      className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg"
+      className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100"
       style={{ paddingBottom: "max(0px, env(safe-area-inset-bottom))" }}
     >
       <div className="flex justify-around items-center max-w-md mx-auto">
@@ -79,12 +87,12 @@ export default function Tabs({ tabs, activeTab, onChange }: TabsProps) {
             key={tab.id}
             onClick={() => onChange(tab.id)}
             className={`
-              flex-1 py-3 px-2 text-center transition-colors duration-200
-              flex flex-col items-center gap-1
+              flex-1 py-4 px-2 text-center transition-colors duration-200
+              flex flex-col items-center gap-2 border-t-2
               ${
                 activeTab === tab.id
-                  ? "text-blue-600 border-t-2 border-blue-600"
-                  : "text-gray-600 hover:text-gray-800"
+                  ? "text-gray-900 border-gray-900"
+                  : "text-gray-400 border-transparent hover:text-gray-600"
               }
             `}
             title={tab.label}
@@ -93,7 +101,9 @@ export default function Tabs({ tabs, activeTab, onChange }: TabsProps) {
             <div className="flex items-center justify-center">
               {TabIcons[tab.id] || <span className="text-xl">{tab.icon}</span>}
             </div>
-            <span className="text-xs font-medium">{tab.label}</span>
+            <span className="text-xs font-medium tracking-tight">
+              {tab.label}
+            </span>
           </button>
         ))}
       </div>

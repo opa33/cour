@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Button, Card, NumberInput } from "../components";
+import { Button, Card } from "../components";
 import { useUserStore } from "../store";
 import type { UserSettings } from "../store/types";
 import { getTelegramUser } from "../utils/telegram";
@@ -15,7 +15,6 @@ export default function Profile() {
   // Telegram user data
   const [telegramUser, setTelegramUser] = useState<any>(null);
   const [displayName, setDisplayName] = useState("");
-  const [photoUrl, setPhotoUrl] = useState<string | null>(null);
 
   // Initialize Telegram user data
   useEffect(() => {
@@ -23,7 +22,6 @@ export default function Profile() {
     setTelegramUser(user);
     if (user) {
       setDisplayName(user.first_name || user.username || `User ${user.id}`);
-      setPhotoUrl(user.photo_url || null);
     }
   }, []);
 
@@ -47,200 +45,184 @@ export default function Profile() {
       setTimeout(() => setSaveSuccess(false), 3000);
     } catch (error) {
       console.error("Failed to save settings:", error);
-      alert("❌ Ошибка сохранения");
+      alert("Ошибка сохранения");
     } finally {
       setIsSaving(false);
     }
   };
 
-  const handleReset = () => {
-    setFormData(userSettings);
-  };
-
   return (
-    <div className="min-h-screen bg-gray-50 p-4 pb-safe pl-safe pr-safe">
+    <div className="min-h-screen bg-white p-4 pb-safe pl-safe pr-safe">
       <div className="max-w-md mx-auto">
-        {/* User Card - Profile Header */}
-        <Card variant="elevated" className="mb-6 p-6 text-center">
-          <div className="flex flex-col items-center">
-            {/* User Photo */}
-            {photoUrl ? (
+        {/* Header with Telegram Profile */}
+        <div className="mb-8">
+          <div className="flex items-center gap-4 mb-6">
+            {telegramUser?.photo_url && (
               <img
-                src={photoUrl}
-                alt="Profile"
-                className="w-24 h-24 rounded-full border-4 border-blue-500 mb-4 object-cover"
+                src={telegramUser.photo_url}
+                alt={displayName}
+                className="w-16 h-16 rounded-full object-cover border-2 border-gray-200"
               />
-            ) : (
-              <div className="w-24 h-24 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center mb-4">
-                <span className="text-white text-3xl">👤</span>
-              </div>
             )}
-
-            {/* User Name */}
-            <h2 className="text-2xl font-bold text-gray-800">{displayName}</h2>
-
-            {/* Username */}
-            {telegramUser?.username && (
-              <p className="text-sm text-gray-600 mt-1">
-                @{telegramUser.username}
+            <div>
+              <h1 className="text-2xl font-semibold text-gray-900">
+                {displayName}
+              </h1>
+              {telegramUser?.username && (
+                <p className="text-sm text-gray-500 mt-1">
+                  @{telegramUser.username}
+                </p>
+              )}
+              <p className="text-xs text-gray-400 mt-1">
+                ID: {telegramUser?.id}
               </p>
-            )}
-
-            {/* Telegram ID */}
-            <p className="text-xs text-gray-500 mt-2">
-              ID: {telegramUser?.id || "N/A"}
-            </p>
+            </div>
           </div>
-        </Card>
+        </div>
 
-        {/* Tariffs Section */}
-        <Card variant="elevated" className="mb-4">
-          <h2 className="text-lg font-semibold text-gray-800 mb-4">
-            💰 Тарифы
-          </h2>
+        {/* Tariffs - Read Only */}
+        <Card variant="elevated" className="mb-6">
+          <div className="flex items-center gap-2 mb-4">
+            <div className="p-2 bg-gray-100 rounded-lg">
+              <svg
+                className="w-5 h-5 text-gray-600"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <line x1="12" y1="1" x2="12" y2="23" />
+                <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+              </svg>
+            </div>
+            <h3 className="text-sm font-semibold text-gray-900">Тарифы</h3>
+          </div>
 
-          <div className="space-y-3">
-            <NumberInput
-              label="За минуту (₽)"
-              type="number"
-              min={0}
-              step={0.01}
-              value={formData.ratePerMinute || ""}
-              onChange={(e) =>
-                handleInputChange(
-                  "ratePerMinute",
-                  parseFloat(e.target.value) || 0,
-                )
-              }
-            />
-
-            <div className="grid grid-cols-3 gap-2">
-              <NumberInput
-                label="Зона 1 (₽)"
-                type="number"
-                min={0}
-                value={formData.priceZone1 || ""}
-                onChange={(e) =>
-                  handleInputChange("priceZone1", parseInt(e.target.value) || 0)
-                }
-              />
-              <NumberInput
-                label="Зона 2 (₽)"
-                type="number"
-                min={0}
-                value={formData.priceZone2 || ""}
-                onChange={(e) =>
-                  handleInputChange("priceZone2", parseInt(e.target.value) || 0)
-                }
-              />
-              <NumberInput
-                label="Зона 3 (₽)"
-                type="number"
-                min={0}
-                value={formData.priceZone3 || ""}
-                onChange={(e) =>
-                  handleInputChange("priceZone3", parseInt(e.target.value) || 0)
-                }
-              />
+          <div className="space-y-3 bg-gray-50 p-3 rounded-lg">
+            <div>
+              <p className="text-xs text-gray-600 mb-1">За минуту</p>
+              <p className="text-lg font-semibold text-gray-900">
+                {formData.ratePerMinute}
+              </p>
             </div>
 
-            <NumberInput
-              label="Налог (%)"
-              type="number"
-              min={0}
-              max={100}
-              step={0.01}
-              value={((1 - formData.taxCoefficient) * 100 || 0).toFixed(2)}
-              onChange={(e) => {
-                const taxPercent = parseFloat(e.target.value) || 0;
-                handleInputChange("taxCoefficient", 1 - taxPercent / 100);
-              }}
-            />
+            <div className="grid grid-cols-3 gap-2">
+              <div>
+                <p className="text-xs text-gray-600 mb-1">Зона 1</p>
+                <p className="text-lg font-semibold text-gray-900">
+                  {formData.priceZone1}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-600 mb-1">Зона 2</p>
+                <p className="text-lg font-semibold text-gray-900">
+                  {formData.priceZone2}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-600 mb-1">Зона 3</p>
+                <p className="text-lg font-semibold text-gray-900">
+                  {formData.priceZone3}
+                </p>
+              </div>
+            </div>
           </div>
         </Card>
 
-        {/* Goals Section */}
-        <Card variant="elevated" className="mb-4">
-          <h2 className="text-lg font-semibold text-gray-800 mb-4">🎯 Цели</h2>
+        {/* Settings - Checkboxes Only */}
+        <Card variant="elevated" className="mb-6">
+          <div className="flex items-center gap-2 mb-4">
+            <div className="p-2 bg-gray-100 rounded-lg">
+              <svg
+                className="w-5 h-5 text-gray-600"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <circle cx="12" cy="12" r="1" />
+                <path d="M12 1v6m0 6v6M4.22 4.22l4.24 4.24m5.08 0l4.24-4.24M1 12h6m6 0h6M4.22 19.78l4.24-4.24m5.08 0l4.24 4.24" />
+              </svg>
+            </div>
+            <h3 className="text-sm font-semibold text-gray-900">Параметры</h3>
+          </div>
 
           <div className="space-y-3">
-            <NumberInput
-              label="Целевой доход в неделю"
-              type="number"
-              min={0}
-              value={formData.earningsGoal || ""}
-              onChange={(e) =>
-                handleInputChange("earningsGoal", parseInt(e.target.value) || 0)
-              }
-            />
-
-            <div className="bg-blue-50 p-3 rounded border border-blue-200">
-              <label className="flex items-center gap-2 cursor-pointer">
+            <div className="p-3 rounded-lg border border-gray-200 hover:border-gray-300 transition-colors">
+              <label className="flex items-center gap-3 cursor-pointer">
                 <input
                   type="checkbox"
                   checked={formData.fuelTrackingEnabled}
                   onChange={(e) =>
                     handleInputChange("fuelTrackingEnabled", e.target.checked)
                   }
-                  className="w-4 h-4"
+                  className="w-4 h-4 rounded border-gray-300"
                 />
-                <span className="text-sm font-semibold text-gray-700">
-                  Учитывать бензин при расчёте
-                </span>
+                <div>
+                  <span className="text-sm font-semibold text-gray-900">
+                    Учитывать бензин
+                  </span>
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    Вычитает стоимость из прибыли
+                  </p>
+                </div>
               </label>
-              <p className="text-xs text-gray-600 mt-1 ml-6">
-                Вычитает стоимость бензина из прибыли
-              </p>
             </div>
 
-            <div className="bg-purple-50 p-3 rounded border border-purple-200">
-              <label className="flex items-center gap-2 cursor-pointer">
+            <div className="p-3 rounded-lg border border-gray-200 hover:border-gray-300 transition-colors">
+              <label className="flex items-center gap-3 cursor-pointer">
                 <input
                   type="checkbox"
                   checked={formData.leaderboardOptIn}
                   onChange={(e) =>
                     handleInputChange("leaderboardOptIn", e.target.checked)
                   }
-                  className="w-4 h-4"
+                  className="w-4 h-4 rounded border-gray-300"
                 />
-                <span className="text-sm font-semibold text-gray-700">
-                  Участвовать в рейтинге
-                </span>
+                <div>
+                  <span className="text-sm font-semibold text-gray-900">
+                    Участвовать в рейтинге
+                  </span>
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    Видны только имя и доход
+                  </p>
+                </div>
               </label>
-              <p className="text-xs text-gray-600 mt-1 ml-6">
-                Ваш заработок будет видим в топ-5 (только имя и доход)
-              </p>
             </div>
           </div>
         </Card>
 
         {/* Success Message */}
         {saveSuccess && (
-          <div className="mt-4 p-3 bg-green-100 border border-green-300 text-green-800 rounded text-sm text-center font-semibold">
-            ✅ Настройки сохранены!
+          <div className="mb-4 p-3 bg-green-100 border border-green-300 text-green-800 rounded text-sm text-center font-semibold flex items-center justify-center gap-2">
+            <svg
+              className="w-4 h-4"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <polyline points="20 6 9 17 4 12" />
+            </svg>
+            Параметры сохранены!
           </div>
         )}
 
-        {/* Action Buttons */}
-        <div className="space-y-2">
-          <Button
-            onClick={handleSave}
-            isLoading={isSaving}
-            size="lg"
-            variant="success"
-            className="w-full"
-          >
-            💾 Сохранить
-          </Button>
-          <Button
-            onClick={handleReset}
-            size="lg"
-            variant="secondary"
-            className="w-full"
-          >
-            ↩️ Отменить
-          </Button>
-        </div>
+        {/* Save Button */}
+        <Button
+          onClick={handleSave}
+          isLoading={isSaving}
+          size="lg"
+          className="w-full bg-gray-900 text-white"
+        >
+          Сохранить параметры
+        </Button>
       </div>
     </div>
   );
