@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Button, Card } from "../components";
+import { Button, Card, Input } from "../components";
 import { useUserStore } from "../store";
 import type { UserSettings } from "../store/types";
 import { getTelegramUser } from "../utils/telegram";
@@ -14,16 +14,23 @@ export default function Profile() {
 
   // Telegram user data
   const [telegramUser, setTelegramUser] = useState<any>(null);
-  const [displayName, setDisplayName] = useState("");
+  const [telegramUsername, setTelegramUsername] = useState("");
 
   // Initialize Telegram user data
   useEffect(() => {
     const user = getTelegramUser();
     setTelegramUser(user);
-    if (user) {
-      setDisplayName(user.first_name || user.username || `User ${user.id}`);
+    if (user?.username) {
+      setTelegramUsername(user.username);
+      // If username not set in settings, use Telegram username
+      if (!userSettings.username) {
+        setFormData((prev: any) => ({
+          ...prev,
+          username: user.username,
+        }));
+      }
     }
-  }, []);
+  }, [userSettings.username]);
 
   // Sync form when settings change
   useEffect(() => {
@@ -60,17 +67,17 @@ export default function Profile() {
             {telegramUser?.photo_url && (
               <img
                 src={telegramUser.photo_url}
-                alt={displayName}
+                alt={formData.username}
                 className="w-16 h-16 rounded-full object-cover border-2 border-gray-200"
               />
             )}
             <div>
               <h1 className="text-2xl font-semibold text-gray-900">
-                {displayName}
+                {formData.username}
               </h1>
-              {telegramUser?.username && (
+              {telegramUsername && (
                 <p className="text-sm text-gray-500 mt-1">
-                  @{telegramUser.username}
+                  Telegram: @{telegramUsername}
                 </p>
               )}
               <p className="text-xs text-gray-400 mt-1">
@@ -80,12 +87,55 @@ export default function Profile() {
           </div>
         </div>
 
-        {/* Tariffs - Read Only */}
+        {/* Username Section */}
         <Card variant="elevated" className="mb-6">
           <div className="flex items-center gap-2 mb-4">
-            <div className="p-2 bg-gray-100 rounded-lg">
+            <div className="p-2 bg-blue-100 rounded-lg">
               <svg
-                className="w-5 h-5 text-gray-600"
+                className="w-5 h-5 text-blue-600"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                <circle cx="12" cy="7" r="4" />
+              </svg>
+            </div>
+            <h3 className="text-sm font-semibold text-gray-900">Профиль</h3>
+          </div>
+
+          <div className="space-y-3">
+            <Input
+              type="text"
+              placeholder="Введите ваш ник"
+              value={formData.username}
+              onChange={(e) => handleInputChange("username", e.target.value)}
+              className="w-full"
+            />
+
+            {telegramUsername && formData.username !== telegramUsername && (
+              <button
+                onClick={() => handleInputChange("username", telegramUsername)}
+                className="w-full px-3 py-2 text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 rounded font-medium transition-colors"
+              >
+                ↺ Использовать Telegram ник @{telegramUsername}
+              </button>
+            )}
+
+            <p className="text-xs text-gray-500 p-2 bg-gray-50 rounded">
+              💡 По умолчанию используется ник из Telegram, но вы можете его
+              изменить
+            </p>
+          </div>
+        </Card>
+        <Card variant="elevated" className="mb-6">
+          <div className="flex items-center gap-2 mb-4">
+            <div className="p-2 bg-green-100 rounded-lg">
+              <svg
+                className="w-5 h-5 text-green-600"
                 viewBox="0 0 24 24"
                 fill="none"
                 stroke="currentColor"
@@ -131,12 +181,12 @@ export default function Profile() {
           </div>
         </Card>
 
-        {/* Settings - Checkboxes Only */}
+        {/* Settings */}
         <Card variant="elevated" className="mb-6">
           <div className="flex items-center gap-2 mb-4">
-            <div className="p-2 bg-gray-100 rounded-lg">
+            <div className="p-2 bg-purple-100 rounded-lg">
               <svg
-                className="w-5 h-5 text-gray-600"
+                className="w-5 h-5 text-purple-600"
                 viewBox="0 0 24 24"
                 fill="none"
                 stroke="currentColor"
@@ -144,7 +194,7 @@ export default function Profile() {
                 strokeLinecap="round"
                 strokeLinejoin="round"
               >
-                <circle cx="12" cy="12" r="1" />
+                <circle cx="12" cy="12" r="3" />
                 <path d="M12 1v6m0 6v6M4.22 4.22l4.24 4.24m5.08 0l4.24-4.24M1 12h6m6 0h6M4.22 19.78l4.24-4.24m5.08 0l4.24 4.24" />
               </svg>
             </div>

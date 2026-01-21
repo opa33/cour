@@ -334,23 +334,25 @@ export const getLeaderboard = async (
 
   try {
     const result = await retryAsync(async () => {
-      // Get all shifts for the period
+      // Get all shifts for the period, selecting the correct earning column
       const { data: shiftsData, error: shiftsError } = await supabase
         .from("shifts")
-        .select("telegram_id, netProfit")
+        .select("telegram_id, totalWithoutTax, netProfit")
         .gte("date", startDate)
         .lte("date", endDate);
 
       if (shiftsError) throw shiftsError;
       if (!shiftsData || shiftsData.length === 0) return [];
 
-      // Group by telegram_id and sum earnings
+      // Group by telegram_id and sum earnings (use totalWithoutTax as primary, fallback to netProfit)
       const grouped: Record<string, number> = {};
       shiftsData.forEach((row: any) => {
         if (!grouped[row.telegram_id]) {
           grouped[row.telegram_id] = 0;
         }
-        grouped[row.telegram_id] += row.netProfit;
+        // Use totalWithoutTax if available, otherwise use netProfit
+        const earnings = row.totalWithoutTax || row.netProfit || 0;
+        grouped[row.telegram_id] += earnings;
       });
 
       // Get user info for all telegram_ids
@@ -362,15 +364,16 @@ export const getLeaderboard = async (
 
       if (usersError) throw usersError;
 
-      // Build leaderboard entries
+      // Build leaderboard entries - only include users who opted in
       const leaderboard = (usersData || [])
-        .filter((user: any) => user.leaderboard_opt_in) // Only include opt-in users
+        .filter((user: any) => user.leaderboard_opt_in === true) // Only include opt-in users
         .map((user: any) => ({
           rank: 0, // Will be assigned after sorting
           telegram_id: user.telegram_id,
           username: user.username || "Unknown",
           total_earnings: grouped[user.telegram_id] || 0,
-        }));
+        }))
+        .filter((item: any) => item.total_earnings > 0); // Filter out users with no earnings
 
       // Sort by earnings and assign ranks
       leaderboard.sort((a: any, b: any) => b.total_earnings - a.total_earnings);
@@ -379,6 +382,7 @@ export const getLeaderboard = async (
         .map((item: any, idx: number) => ({ ...item, rank: idx + 1 }));
     });
 
+    console.log("📊 Leaderboard loaded:", result);
     return result;
   } catch (error) {
     console.error("❌ Failed to get leaderboard:", error);

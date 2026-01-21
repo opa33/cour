@@ -1,4 +1,5 @@
 export interface UserSettings {
+  username: string;
   ratePerMinute: number;
   priceZone1: number;
   priceZone2: number;

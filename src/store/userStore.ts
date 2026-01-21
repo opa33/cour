@@ -2,6 +2,7 @@ import { create } from "zustand";
 import type { UserSettings } from "./types";
 
 const DEFAULT_SETTINGS: UserSettings = {
+  username: "",
   ratePerMinute: 0.54,
   priceZone1: 196,
   priceZone2: 212,
