@@ -330,11 +330,16 @@ export const getLeaderboard = async (
   endDate: string,
   limit: number = 5,
 ) => {
-  if (!isSupabaseConfigured()) return [];
+  if (!isSupabaseConfigured()) {
+    console.log("⚠️ Supabase not configured");
+    return [];
+  }
 
   try {
     const result = await retryAsync(async () => {
-      // Get all shifts for the period, selecting the correct earning column
+      console.log(`📊 Getting leaderboard for ${startDate} to ${endDate}`);
+
+      // Get all shifts for the period
       const { data: shiftsData, error: shiftsError } = await supabase
         .from("shifts")
         .select("telegram_id, totalWithoutTax, netProfit")
@@ -342,18 +347,28 @@ export const getLeaderboard = async (
         .lte("date", endDate);
 
       if (shiftsError) throw shiftsError;
-      if (!shiftsData || shiftsData.length === 0) return [];
 
-      // Group by telegram_id and sum earnings (use totalWithoutTax as primary, fallback to netProfit)
+      console.log("📈 Shifts fetched:", shiftsData?.length || 0);
+
+      if (!shiftsData || shiftsData.length === 0) {
+        console.log("⚠️ No shifts found for period");
+        return [];
+      }
+
+      // Group by telegram_id and sum earnings
       const grouped: Record<string, number> = {};
       shiftsData.forEach((row: any) => {
         if (!grouped[row.telegram_id]) {
           grouped[row.telegram_id] = 0;
         }
-        // Use totalWithoutTax if available, otherwise use netProfit
         const earnings = row.totalWithoutTax || row.netProfit || 0;
         grouped[row.telegram_id] += earnings;
       });
+
+      console.log(
+        "👥 Unique users with earnings:",
+        Object.keys(grouped).length,
+      );
 
       // Get user info for all telegram_ids
       const telegramIds = Object.keys(grouped);
@@ -364,25 +379,51 @@ export const getLeaderboard = async (
 
       if (usersError) throw usersError;
 
-      // Build leaderboard entries - only include users who opted in
+      console.log("🔍 Users data fetched:", usersData?.length || 0);
+
+      if (!usersData || usersData.length === 0) {
+        console.log("⚠️ No user data found");
+        return [];
+      }
+
+      // Build leaderboard entries
       const leaderboard = (usersData || [])
-        .filter((user: any) => user.leaderboard_opt_in === true) // Only include opt-in users
         .map((user: any) => ({
-          rank: 0, // Will be assigned after sorting
+          rank: 0,
           telegram_id: user.telegram_id,
           username: user.username || "Unknown",
           total_earnings: grouped[user.telegram_id] || 0,
+          opted_in: user.leaderboard_opt_in, // Include for debugging
         }))
-        .filter((item: any) => item.total_earnings > 0); // Filter out users with no earnings
+        .filter((item: any) => item.total_earnings > 0); // Only users with earnings
+
+      console.log("📋 Before opt-in filter:", leaderboard.length);
+      console.log("Leaderboard entries:", leaderboard);
+
+      // Filter by opt-in status (if they didn't opt-in, they won't appear)
+      const optedInLeaderboard = leaderboard.filter(
+        (item: any) => item.leaderboard_opt_in !== false, // Show if true or null/undefined
+      );
+
+      console.log("📋 After opt-in filter:", optedInLeaderboard.length);
 
       // Sort by earnings and assign ranks
-      leaderboard.sort((a: any, b: any) => b.total_earnings - a.total_earnings);
-      return leaderboard
+      optedInLeaderboard.sort(
+        (a: any, b: any) => b.total_earnings - a.total_earnings,
+      );
+      const finalLeaderboard = optedInLeaderboard
         .slice(0, limit)
-        .map((item: any, idx: number) => ({ ...item, rank: idx + 1 }));
+        .map((item: any, idx: number) => ({
+          rank: idx + 1,
+          telegram_id: item.telegram_id,
+          username: item.username,
+          total_earnings: item.total_earnings,
+        }));
+
+      console.log("✅ Final leaderboard:", finalLeaderboard);
+      return finalLeaderboard;
     });
 
-    console.log("📊 Leaderboard loaded:", result);
     return result;
   } catch (error) {
     console.error("❌ Failed to get leaderboard:", error);
