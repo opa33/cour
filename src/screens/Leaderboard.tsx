@@ -146,8 +146,30 @@ export default function Leaderboard() {
 
         {/* Leaderboard List */}
         {isLoading ? (
-          <Card variant="elevated" className="text-center py-8">
-            <p className="text-gray-600">⏳ Загрузка рейтинга...</p>
+          <Card variant="elevated" className="py-8">
+            <div className="text-center space-y-4">
+              <div className="flex justify-center">
+                <div className="relative w-12 h-12">
+                  <div className="absolute inset-0 rounded-full border-3 border-blue-200"></div>
+                  <div
+                    className="absolute inset-0 rounded-full border-3 border-transparent border-t-blue-600 border-r-blue-600"
+                    style={{
+                      animation: "spin 1s linear infinite",
+                    }}
+                  ></div>
+                  <style>{`
+                    @keyframes spin {
+                      to {
+                        transform: rotate(360deg);
+                      }
+                    }
+                  `}</style>
+                </div>
+              </div>
+              <p className="text-sm text-gray-600 font-medium">
+                Загрузка рейтинга...
+              </p>
+            </div>
           </Card>
         ) : leaderboardData.length > 0 ? (
           <Card variant="elevated">
@@ -203,7 +225,6 @@ export default function Leaderboard() {
           </Card>
         ) : (
           <Card variant="elevated" className="text-center py-8">
-            <p className="text-gray-600 mb-2">📊</p>
             <p className="text-gray-600 font-medium">Нет данных о курьерах</p>
             <p className="text-xs text-gray-500 mt-2">
               Убедитесь, что у вас есть смены за этот месяц и вы включили
@@ -217,7 +238,8 @@ export default function Leaderboard() {
           <Card variant="elevated" className="mt-6">
             <div className="text-center py-2">
               <p className="text-sm font-medium text-gray-700">
-                👥 {leaderboardData.length} курьер
+                {" "}
+                {leaderboardData.length} курьер
                 {leaderboardData.length > 1 ? "ов" : ""} в рейтинге
               </p>
             </div>

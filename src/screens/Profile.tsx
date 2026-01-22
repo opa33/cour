@@ -117,14 +117,17 @@ export default function Profile() {
               className="w-full"
             />
 
-            {telegramUsername && formData.username !== telegramUsername && (
-              <button
-                onClick={() => handleInputChange("username", telegramUsername)}
-                className="w-full px-3 py-2 text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 rounded font-medium transition-colors"
-              >
-                ↺ Использовать Telegram ник @{telegramUsername}
-              </button>
-            )}
+            {(() => {
+              const firstName = getFirstName();
+              return firstName && formData.username !== firstName ? (
+                <button
+                  onClick={() => handleInputChange("username", firstName)}
+                  className="w-full px-3 py-2 text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 rounded font-medium transition-colors"
+                >
+                  ↺ Использовать Telegram {firstName}
+                </button>
+              ) : null;
+            })()}
 
             <p className="text-xs text-gray-500 p-2 bg-gray-50 rounded">
               💡 Будет использоваться для рейтинга

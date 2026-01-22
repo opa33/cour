@@ -87,13 +87,49 @@ export default function App() {
   // Wait for initialization before rendering
   if (!isInitialized) {
     return (
-      <div className="w-full h-full flex items-center justify-center bg-gray-50">
-        <div className="text-center p-6 max-w-sm">
-          <div className="text-4xl mb-4">⏳</div>
-          <p className="text-gray-600 mb-4">Загрузка...</p>
-          <div className="text-sm text-gray-500 space-y-2">
-            <p>📱 Приложение требует Telegram для авторизации</p>
-            <p>Убедитесь, что используете его в Telegram Mini App</p>
+      <div className="w-full h-full min-h-screen bg-white flex items-center justify-center p-4">
+        <div className="max-w-md w-full">
+          <div className="text-center space-y-6">
+            <div className="flex justify-center">
+              <div className="relative w-16 h-16">
+                <div className="absolute inset-0 rounded-full border-4 border-blue-200"></div>
+                <div
+                  className="absolute inset-0 rounded-full border-4 border-transparent border-t-blue-600 border-r-blue-600"
+                  style={{
+                    animation: "spin 1s linear infinite",
+                  }}
+                ></div>
+                <style>{`
+                  @keyframes spin {
+                    to {
+                      transform: rotate(360deg);
+                    }
+                  }
+                `}</style>
+              </div>
+            </div>
+            <div>
+              <h2 className="text-2xl font-semibold text-gray-900 mb-2">
+                Загрузка приложения
+              </h2>
+              <p className="text-sm text-gray-600">Пожалуйста, подождите...</p>
+            </div>
+
+            <div className="space-y-3 bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <div className="flex items-start gap-3">
+                <p className="text-sm text-blue-900">
+                  <span className="font-semibold">Требуется Telegram:</span>{" "}
+                  приложение работает только внутри Telegram Mini App
+                </p>
+              </div>
+
+              <div className="flex items-start gap-3">
+                <p className="text-sm text-blue-900">
+                  <span className="font-semibold">Требуется VPN:</span>
+                  подключитесь к VPN для доступа
+                </p>
+              </div>
+            </div>
           </div>
         </div>
       </div>
