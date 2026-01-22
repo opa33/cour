@@ -8,6 +8,16 @@ from = "/*"
 to = "/index.html"
 status = 200
 
+[[headers]]
+for = "*.js"
+[headers.values]
+Content-Type = "application/javascript; charset=utf-8"
+
+[[headers]]
+for = "*.json"
+[headers.values]
+Content-Type = "application/json; charset=utf-8"
+
 [dev]
 command = "npm run dev"
 port = 5173
