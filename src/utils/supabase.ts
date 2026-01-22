@@ -248,6 +248,7 @@ export const saveUserSettingsToSupabase = async (settings: any) => {
       const { data, error } = await supabase
         .from("users")
         .update({
+          username: settings.username,
           settings: settings,
           updated_at: new Date().toISOString(),
         })
