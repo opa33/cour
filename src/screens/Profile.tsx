@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Button, Card, Input } from "../components";
 import { useUserStore } from "../store";
 import type { UserSettings } from "../store/types";
-import { getTelegramUser } from "../utils/telegram";
+import { getTelegramUser, getFirstName } from "../utils/telegram";
 
 export default function Profile() {
   const userSettings = useUserStore((state: any) => state.settings);
@@ -19,14 +19,15 @@ export default function Profile() {
   // Initialize Telegram user data
   useEffect(() => {
     const user = getTelegramUser();
+    const firstName = getFirstName();
     setTelegramUser(user);
     if (user?.username) {
       setTelegramUsername(user.username);
-      // If username not set in settings, use Telegram username
-      if (!userSettings.username) {
+      // If username not set in settings, use Telegram first name
+      if (!userSettings.username && firstName) {
         setFormData((prev: any) => ({
           ...prev,
-          username: user.username,
+          username: firstName,
         }));
       }
     }
@@ -126,8 +127,7 @@ export default function Profile() {
             )}
 
             <p className="text-xs text-gray-500 p-2 bg-gray-50 rounded">
-              💡 По умолчанию используется ник из Telegram, но вы можете его
-              изменить
+              💡 Будет использоваться для рейтинга
             </p>
           </div>
         </Card>

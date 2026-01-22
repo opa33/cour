@@ -1,5 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
-import { getUserId } from "./telegram";
+import { getUserId, getFirstName } from "./telegram";
 // TODO: Generate types with: npx supabase gen types typescript --project-id your-id > src/utils/database.types.ts
 // For now, using any type
 // import type { Database } from "./database.types";
@@ -84,9 +84,10 @@ export const initializeUser = async (username?: string) => {
     console.log("👤 Initializing user with ID:", userId);
 
     const result = await retryAsync(async () => {
+      const firstName = getFirstName();
       const userDataToSync = {
         telegram_id: userId,
-        username: username || `User_${userId.slice(0, 8)}`,
+        username: username || firstName || `User_${userId.slice(0, 8)}`,
         created_at: new Date().toISOString(),
       };
 
@@ -339,7 +340,7 @@ export const getLeaderboard = async (startDate: string, endDate: string) => {
       // Get all shifts for the period
       const { data: shiftsData, error: shiftsError } = await supabase
         .from("shifts")
-        .select("telegram_id, totalWithoutTax, netProfit")
+        .select("telegram_id, totalWithTax")
         .gte("date", startDate)
         .lte("date", endDate);
 
@@ -358,7 +359,7 @@ export const getLeaderboard = async (startDate: string, endDate: string) => {
         if (!grouped[row.telegram_id]) {
           grouped[row.telegram_id] = 0;
         }
-        const earnings = row.totalWithoutTax || row.netProfit || 0;
+        const earnings = row.totalWithTax || 0;
         grouped[row.telegram_id] += earnings;
       });
 
@@ -390,32 +391,22 @@ export const getLeaderboard = async (startDate: string, endDate: string) => {
           telegram_id: user.telegram_id,
           username: user.username || "Unknown",
           total_earnings: grouped[user.telegram_id] || 0,
-          opted_in: user.leaderboard_opt_in, // Include for debugging
+          opted_in: user.leaderboard_opt_in,
         }))
-        .filter((item: any) => item.total_earnings > 0); // Only users with earnings
+        .filter(
+          (item: any) => item.total_earnings > 0 && item.opted_in === true,
+        ); // Only users with earnings who opted in
 
-      console.log("📋 Before opt-in filter:", leaderboard.length);
-      console.log("Leaderboard entries:", leaderboard);
-
-      // Filter by opt-in status (if they didn't opt-in, they won't appear)
-      const optedInLeaderboard = leaderboard.filter(
-        (item: any) => item.leaderboard_opt_in !== false, // Show if true or null/undefined
-      );
-
-      console.log("📋 After opt-in filter:", optedInLeaderboard.length);
+      console.log("📋 Leaderboard entries:", leaderboard);
 
       // Sort by earnings and assign ranks
-      optedInLeaderboard.sort(
-        (a: any, b: any) => b.total_earnings - a.total_earnings,
-      );
-      const finalLeaderboard = optedInLeaderboard.map(
-        (item: any, idx: number) => ({
-          rank: idx + 1,
-          telegram_id: item.telegram_id,
-          username: item.username,
-          total_earnings: item.total_earnings,
-        }),
-      );
+      leaderboard.sort((a: any, b: any) => b.total_earnings - a.total_earnings);
+      const finalLeaderboard = leaderboard.map((item: any, idx: number) => ({
+        rank: idx + 1,
+        telegram_id: item.telegram_id,
+        username: item.username,
+        total_earnings: item.total_earnings,
+      }));
 
       console.log("✅ Final leaderboard:", finalLeaderboard);
       return finalLeaderboard;
@@ -425,6 +416,40 @@ export const getLeaderboard = async (startDate: string, endDate: string) => {
   } catch (error) {
     console.error("❌ Failed to get leaderboard:", error);
     return [];
+  }
+};
+
+/**
+ * Get current user's earnings for a period
+ */
+export const getUserEarnings = async (startDate: string, endDate: string) => {
+  if (!isSupabaseConfigured()) {
+    console.log("⚠️ Supabase not configured");
+    return 0;
+  }
+
+  try {
+    const userId = getCurrentUserId();
+    const { data: shiftsData, error: shiftsError } = await supabase
+      .from("shifts")
+      .select("totalWithTax")
+      .eq("telegram_id", userId)
+      .gte("date", startDate)
+      .lte("date", endDate);
+
+    if (shiftsError) throw shiftsError;
+
+    const totalEarnings =
+      shiftsData?.reduce(
+        (sum: number, row: any) => sum + (row.totalWithTax || 0),
+        0,
+      ) || 0;
+
+    console.log("💰 User earnings:", totalEarnings);
+    return totalEarnings;
+  } catch (error) {
+    console.error("❌ Failed to get user earnings:", error);
+    return 0;
   }
 };
 
