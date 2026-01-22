@@ -393,20 +393,37 @@ export const getLeaderboard = async (startDate: string, endDate: string) => {
           total_earnings: grouped[user.telegram_id] || 0,
           opted_in: user.leaderboard_opt_in,
         }))
-        .filter(
-          (item: any) => item.total_earnings > 0 && item.opted_in === true,
-        ); // Only users with earnings who opted in
+        .filter((item: any) => item.total_earnings > 0); // Only users with earnings
 
-      console.log("📋 Leaderboard entries:", leaderboard);
+      console.log("📋 Before opt-in filter:", leaderboard.length);
+      console.log(
+        "📋 Leaderboard entries:",
+        leaderboard.map((l: any) => ({
+          username: l.username,
+          earnings: l.total_earnings,
+          opted_in: l.opted_in,
+        })),
+      );
+
+      // Filter by opt-in status (show if true or null/undefined for now)
+      const filteredLeaderboard = leaderboard.filter(
+        (item: any) => item.opted_in !== false,
+      );
+
+      console.log("📋 After opt-in filter:", filteredLeaderboard.length);
 
       // Sort by earnings and assign ranks
-      leaderboard.sort((a: any, b: any) => b.total_earnings - a.total_earnings);
-      const finalLeaderboard = leaderboard.map((item: any, idx: number) => ({
-        rank: idx + 1,
-        telegram_id: item.telegram_id,
-        username: item.username,
-        total_earnings: item.total_earnings,
-      }));
+      filteredLeaderboard.sort(
+        (a: any, b: any) => b.total_earnings - a.total_earnings,
+      );
+      const finalLeaderboard = filteredLeaderboard.map(
+        (item: any, idx: number) => ({
+          rank: idx + 1,
+          telegram_id: item.telegram_id,
+          username: item.username,
+          total_earnings: item.total_earnings,
+        }),
+      );
 
       console.log("✅ Final leaderboard:", finalLeaderboard);
       return finalLeaderboard;
