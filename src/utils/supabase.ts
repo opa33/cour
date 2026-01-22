@@ -405,12 +405,10 @@ export const getLeaderboard = async (startDate: string, endDate: string) => {
         })),
       );
 
-      // Filter by opt-in status (show if true or null/undefined for now)
-      const filteredLeaderboard = leaderboard.filter(
-        (item: any) => item.opted_in !== false,
-      );
+      // Temporarily show ALL users for debugging (removed opt-in filter)
+      const filteredLeaderboard = leaderboard;
 
-      console.log("📋 After opt-in filter:", filteredLeaderboard.length);
+      console.log("📋 After filter (showing all):", filteredLeaderboard.length);
 
       // Sort by earnings and assign ranks
       filteredLeaderboard.sort(

@@ -235,15 +235,13 @@ export default function Leaderboard() {
 
         {/* Stats Footer */}
         {leaderboardData.length > 0 && (
-          <Card variant="elevated" className="mt-6">
-            <div className="text-center py-2">
-              <p className="text-sm font-medium text-gray-700">
-                {" "}
-                {leaderboardData.length} курьер
-                {leaderboardData.length > 1 ? "ов" : ""} в рейтинге
-              </p>
-            </div>
-          </Card>
+          <div className="text-center py-2 mt-4 border-t border-gray-200">
+            <p className="text-sm font-medium text-gray-500">
+              {" "}
+              {leaderboardData.length} курьер
+              {leaderboardData.length > 1 ? "ов" : ""} в рейтинге
+            </p>
+          </div>
         )}
       </div>
     </div>
