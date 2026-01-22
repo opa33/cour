@@ -1,8 +1,9 @@
 import { create } from "zustand";
 import type { UserSettings } from "./types";
+import { getFirstName } from "../utils/telegram";
 
 const DEFAULT_SETTINGS: UserSettings = {
-  username: "",
+  username: getFirstName() || "Курьер",
   ratePerMinute: 0.54,
   priceZone1: 196,
   priceZone2: 212,
