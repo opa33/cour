@@ -237,9 +237,16 @@ export default function Leaderboard() {
         {leaderboardData.length > 0 && (
           <div className="text-center py-2 mt-4 border-t border-gray-200">
             <p className="text-sm font-medium text-gray-500">
-              {" "}
               {leaderboardData.length} курьер
-              {leaderboardData.length > 1 ? "ов" : ""} в рейтинге
+              {leaderboardData.length === 1
+                ? ""
+                : leaderboardData.length % 10 >= 2 &&
+                    leaderboardData.length % 10 <= 4 &&
+                    (leaderboardData.length % 100 < 12 ||
+                      leaderboardData.length % 100 > 14)
+                  ? "а"
+                  : "ов"}{" "}
+              в рейтинге
             </p>
           </div>
         )}
