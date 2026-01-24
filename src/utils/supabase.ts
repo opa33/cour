@@ -337,10 +337,10 @@ export const getLeaderboard = async (startDate: string, endDate: string) => {
     const result = await retryAsync(async () => {
       console.log(`📊 Getting leaderboard for ${startDate} to ${endDate}`);
 
-      // Get all shifts for the period
+      // Get all shifts for the period with all needed fields
       const { data: shiftsData, error: shiftsError } = await supabase
         .from("shifts")
-        .select("telegram_id, totalWithTax")
+        .select("telegram_id, totalWithTax, minutes, zone1, zone2, zone3")
         .gte("date", startDate)
         .lte("date", endDate);
 
@@ -353,14 +353,27 @@ export const getLeaderboard = async (startDate: string, endDate: string) => {
         return [];
       }
 
-      // Group by telegram_id and sum earnings
-      const grouped: Record<string, number> = {};
+      // Group by telegram_id and sum earnings, hours, orders
+      const grouped: Record<
+        string,
+        {
+          earnings: number;
+          minutes: number;
+          orders: number;
+        }
+      > = {};
       shiftsData.forEach((row: any) => {
         if (!grouped[row.telegram_id]) {
-          grouped[row.telegram_id] = 0;
+          grouped[row.telegram_id] = {
+            earnings: 0,
+            minutes: 0,
+            orders: 0,
+          };
         }
-        const earnings = row.totalWithTax || 0;
-        grouped[row.telegram_id] += earnings;
+        grouped[row.telegram_id].earnings += row.totalWithTax || 0;
+        grouped[row.telegram_id].minutes += row.minutes || 0;
+        grouped[row.telegram_id].orders +=
+          (row.zone1 || 0) + (row.zone2 || 0) + (row.zone3 || 0);
       });
 
       console.log(
@@ -386,13 +399,22 @@ export const getLeaderboard = async (startDate: string, endDate: string) => {
 
       // Build leaderboard entries
       const leaderboard = (usersData || [])
-        .map((user: any) => ({
-          rank: 0,
-          telegram_id: user.telegram_id,
-          username: user.username || "Unknown",
-          total_earnings: grouped[user.telegram_id] || 0,
-          opted_in: user.leaderboard_opt_in,
-        }))
+        .map((user: any) => {
+          const userStats = grouped[user.telegram_id] || {
+            earnings: 0,
+            minutes: 0,
+            orders: 0,
+          };
+          return {
+            rank: 0,
+            telegram_id: user.telegram_id,
+            username: user.username || "Unknown",
+            total_earnings: userStats.earnings,
+            total_minutes: userStats.minutes,
+            orders_count: userStats.orders,
+            opted_in: user.leaderboard_opt_in,
+          };
+        })
         .filter((item: any) => item.total_earnings > 0); // Only users with earnings
 
       console.log("📋 Before opt-in filter:", leaderboard.length);
@@ -401,6 +423,8 @@ export const getLeaderboard = async (startDate: string, endDate: string) => {
         leaderboard.map((l: any) => ({
           username: l.username,
           earnings: l.total_earnings,
+          hours: (l.total_minutes / 60).toFixed(1),
+          orders: l.orders_count,
           opted_in: l.opted_in,
         })),
       );
@@ -420,6 +444,8 @@ export const getLeaderboard = async (startDate: string, endDate: string) => {
           telegram_id: item.telegram_id,
           username: item.username,
           total_earnings: item.total_earnings,
+          total_minutes: item.total_minutes,
+          orders_count: item.orders_count,
         }),
       );
 

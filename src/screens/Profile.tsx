@@ -220,7 +220,7 @@ export default function Profile() {
               </label>
             </div>
 
-            <div className="p-3 rounded-lg border border-gray-200 hover:border-gray-300 transition-colors">
+           {/* <div className="p-3 rounded-lg border border-gray-200 hover:border-gray-300 transition-colors">
               <label className="flex items-center gap-3 cursor-pointer">
                 <input
                   type="checkbox"
@@ -239,7 +239,7 @@ export default function Profile() {
                   </p>
                 </div>
               </label>
-            </div>
+            </div> */}
           </div>
         </Card>
 

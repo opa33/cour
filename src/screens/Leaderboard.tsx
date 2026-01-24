@@ -13,6 +13,14 @@ interface LeaderboardEntry {
   username: string;
   earnings: number;
   userId: string;
+  ordersCount: number;
+  hoursWorked: number;
+}
+
+interface UserStats {
+  earnings: number;
+  ordersCount: number;
+  hoursWorked: number;
 }
 
 export default function Leaderboard() {
@@ -25,7 +33,11 @@ export default function Leaderboard() {
     [],
   );
   const [isLoading, setIsLoading] = useState(false);
-  const [userEarnings, setUserEarnings] = useState<number>(0);
+  const [userStats, setUserStats] = useState<UserStats>({
+    earnings: 0,
+    ordersCount: 0,
+    hoursWorked: 0,
+  });
 
   // Get current user data
   const currentUserId =
@@ -63,20 +75,51 @@ export default function Leaderboard() {
           console.log("📥 Received leaderboard data:", currentData);
           console.log("💰 User earnings:", earnings);
 
-          setUserEarnings(earnings);
-
           if (currentData && currentData.length > 0) {
-            const entries = currentData.map((item: any) => ({
-              rank: item.rank,
-              userId: item.telegram_id,
-              username: item.username,
-              earnings: item.total_earnings,
-            }));
+            const entries = currentData.map((item: any) => {
+              return {
+                rank: item.rank,
+                userId: item.telegram_id,
+                username: item.username,
+                earnings: item.total_earnings,
+                ordersCount: item.orders_count || 0,
+                hoursWorked: item.total_minutes ? item.total_minutes / 60 : 0,
+              };
+            });
             console.log("✅ Leaderboard entries:", entries);
             setLeaderboardData(entries);
           } else {
             console.log("⚠️ No leaderboard data returned");
             setLeaderboardData([]);
+          }
+
+          // Подсчитываем статистику текущего пользователя
+          if (earnings > 0) {
+            const userOrders =
+              currentData
+                ?.filter((item: any) => item.telegram_id === currentUserId)
+                .reduce(
+                  (sum: number, item: any) =>
+                    sum +
+                    (item.zone1 || 0) +
+                    (item.zone2 || 0) +
+                    (item.zone3 || 0),
+                  0,
+                ) || 0;
+
+            const userMinutes =
+              currentData
+                ?.filter((item: any) => item.telegram_id === currentUserId)
+                .reduce(
+                  (sum: number, item: any) => sum + (item.total_minutes || 0),
+                  0,
+                ) || 0;
+
+            setUserStats({
+              earnings: earnings,
+              ordersCount: userOrders,
+              hoursWorked: userMinutes / 60,
+            });
           }
         } else {
           console.log("⚠️ Supabase not configured");
@@ -91,7 +134,7 @@ export default function Leaderboard() {
     };
 
     loadLeaderboard();
-  }, [monthStart, monthEnd, leaderboardOptIn]);
+  }, [monthStart, monthEnd, leaderboardOptIn, currentUserId]);
 
   // Get medal emoji
   const getMedal = (rank: number): string => {
@@ -120,19 +163,50 @@ export default function Leaderboard() {
 
         {/* Your Results Card */}
         <Card variant="elevated" className="mb-6">
-          <div className="flex items-center gap-3 mb-4">
+          <div className="space-y-3">
             <div>
-              <p className="text-xs font-semibold text-gray-600">
+              <p className="text-xs font-semibold text-gray-600 mb-1">
                 ВАШ РЕЗУЛЬТАТ
               </p>
               <p className="text-2xl font-bold text-gray-900">
-                {formatCurrency(userEarnings, currency)}
+                {formatCurrency(userStats.earnings, currency)}
               </p>
+            </div>
+            <div className="grid grid-cols-2 gap-3 pt-3 border-t border-gray-200">
+              <div>
+                <p className="text-xs text-gray-500 font-medium">Заказы</p>
+                <p className="text-lg font-semibold text-gray-900">
+                  {userStats.ordersCount}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-500 font-medium">Часы</p>
+                <p className="text-lg font-semibold text-gray-900">
+                  {userStats.hoursWorked.toFixed(1)}ч
+                </p>
+              </div>
+              <div className="col-span-2 pt-2 border-t border-gray-200">
+                <p className="text-xs text-gray-500 font-medium mb-1">
+                  Средняя производительность
+                </p>
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="text-sm text-gray-700">
+                    <span className="font-semibold">
+                      {userStats.hoursWorked > 0
+                        ? (userStats.earnings / userStats.hoursWorked).toFixed(
+                            0,
+                          )
+                        : 0}
+                    </span>
+                    <span className="text-gray-600"> {currency}/ч</span>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </Card>
 
-        {/* Info Section */}
+        {/* Info Section 
         {!leaderboardOptIn && (
           <Card className="mb-6 bg-amber-50 border border-amber-200">
             <p className="text-sm text-amber-900">
@@ -143,6 +217,7 @@ export default function Leaderboard() {
             </p>
           </Card>
         )}
+        */}
 
         {/* Leaderboard List */}
         {isLoading ? (
@@ -198,7 +273,7 @@ export default function Leaderboard() {
 
                     {/* Username & Status */}
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 mb-2">
                         <p className="font-medium text-gray-900 truncate">
                           {courier.username}
                         </p>
@@ -206,6 +281,31 @@ export default function Leaderboard() {
                           <span className="text-xs bg-blue-500 text-white px-2 py-0.5 rounded-full whitespace-nowrap">
                             ВЫ
                           </span>
+                        )}
+                      </div>
+                      <div className="grid grid-cols-2 gap-2 text-xs text-gray-600">
+                        <div className="flex items-center gap-1">
+                          <span>📦</span>
+                          <span>
+                            {courier.ordersCount} заказ
+                            {courier.ordersCount % 10 === 1 &&
+                            courier.ordersCount !== 11
+                              ? ""
+                              : "ов"}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <span>⏱️</span>
+                          <span>{courier.hoursWorked.toFixed(1)}ч</span>
+                        </div>
+                        {courier.hoursWorked > 0 && (
+                          <div className="col-span-2 text-xs text-gray-500 pt-1 border-t border-gray-300">
+                            Средн:{" "}
+                            {(courier.earnings / courier.hoursWorked).toFixed(
+                              0,
+                            )}{" "}
+                            {currency}/ч
+                          </div>
                         )}
                       </div>
                     </div>
