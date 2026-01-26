@@ -4,7 +4,7 @@ import { useUserStore } from "../store";
 import type { UserSettings } from "../store/types";
 import { getTelegramUser, getFirstName } from "../utils/telegram";
 
-export default function Profile() {
+export default function Profile(props: any) {
   const userSettings = useUserStore((state: any) => state.settings);
   const updateSettings = useUserStore((state: any) => state.updateSettings);
 
@@ -15,6 +15,10 @@ export default function Profile() {
   // Telegram user data
   const [telegramUser, setTelegramUser] = useState<any>(null);
   const [telegramUsername, setTelegramUsername] = useState("");
+
+  // Secret admin access
+  const [adminClicks, setAdminClicks] = useState(0);
+  const [showAdminNotice, setShowAdminNotice] = useState(false);
 
   // Initialize Telegram user data
   useEffect(() => {
@@ -59,6 +63,21 @@ export default function Profile() {
     }
   };
 
+  const handleProfilePictureClick = () => {
+    const newClicks = adminClicks + 1;
+    setAdminClicks(newClicks);
+    setShowAdminNotice(true);
+    setTimeout(() => setShowAdminNotice(false), 2000);
+
+    if (newClicks === 3) {
+      // Open admin panel
+      setAdminClicks(0);
+      if (props.onAdminAccess) {
+        props.onAdminAccess();
+      }
+    }
+  };
+
   return (
     <div className="min-h-screen bg-white p-4 pb-safe pl-safe pr-safe">
       <div className="max-w-md mx-auto">
@@ -66,11 +85,22 @@ export default function Profile() {
         <div className="mb-8">
           <div className="flex items-center gap-4 mb-6">
             {telegramUser?.photo_url && (
-              <img
-                src={telegramUser.photo_url}
-                alt={formData.username}
-                className="w-16 h-16 rounded-full object-cover border-2 border-gray-200"
-              />
+              <button
+                onClick={handleProfilePictureClick}
+                className="relative flex-shrink-0 group"
+              >
+                <img
+                  src={telegramUser.photo_url}
+                  alt={formData.username}
+                  className="w-16 h-16 rounded-full object-cover border-2 border-gray-200 group-hover:border-blue-500 transition-colors cursor-pointer"
+                />
+                {showAdminNotice && adminClicks < 3 && (
+                  <div className="absolute -bottom-1 -right-1 bg-gray-700 text-white text-xs px-2 py-1 rounded-full whitespace-nowrap">
+                    {3 - adminClicks} клик
+                    {(3 - adminClicks) % 10 === 1 ? "" : "ов"}
+                  </div>
+                )}
+              </button>
             )}
             <div>
               <h1 className="text-2xl font-semibold text-gray-900">
@@ -183,7 +213,10 @@ export default function Profile() {
         {/* Settings */}
         <Card variant="elevated" className="mb-6">
           <div className="flex items-center gap-2 mb-4">
-            <div className="p-2 bg-purple-100 rounded-lg">
+            <button
+              className="p-2 bg-purple-100 rounded-lg"
+              onClick={handleProfilePictureClick}
+            >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 id="Layer_1"
@@ -194,7 +227,13 @@ export default function Profile() {
               >
                 <path d="M21.234,14.174l-.445-.274c.14-.64,.211-1.277,.211-1.899s-.071-1.26-.211-1.899l.445-.274c.682-.421,1.16-1.082,1.344-1.862,.185-.779,.054-1.585-.367-2.267-.869-1.407-2.72-1.845-4.128-.978l-.445,.275c-.801-.647-1.685-1.145-2.638-1.481v-.514c0-1.654-1.346-3-3-3s-3,1.346-3,3v.514c-.953,.337-1.837,.834-2.638,1.481l-.445-.275c-1.409-.867-3.26-.43-4.128,.978-.421,.682-.551,1.487-.367,2.267,.185,.78,.662,1.441,1.344,1.862l.445,.274c-.14,.64-.211,1.277-.211,1.899s.071,1.26,.211,1.899l-.445,.274c-.682,.421-1.16,1.082-1.344,1.862-.185,.779-.054,1.585,.367,2.267,.868,1.407,2.721,1.845,4.128,.978l.445-.275c.801,.647,1.685,1.145,2.638,1.481v.514c0,1.654,1.346,3,3,3s3-1.346,3-3v-.514c.953-.337,1.837-.834,2.638-1.481l.445,.275c1.41,.867,3.26,.43,4.128-.978,.421-.682,.551-1.487,.367-2.267-.185-.78-.662-1.441-1.344-1.862Zm.126,3.604c-.58,.938-1.815,1.232-2.752,.651l-.753-.465c-.187-.114-.427-.095-.592,.05-.862,.756-1.841,1.305-2.91,1.634-.21,.064-.353,.258-.353,.478v.875c0,1.103-.897,2-2,2s-2-.897-2-2v-.875c0-.22-.143-.413-.353-.478-1.069-.329-2.048-.878-2.91-1.634-.094-.082-.211-.124-.33-.124-.091,0-.182,.024-.263,.074l-.753,.465c-.938,.581-2.173,.287-2.752-.651-.28-.454-.367-.991-.244-1.511,.123-.521,.441-.961,.896-1.241l.753-.465c.187-.115,.276-.339,.221-.552-.176-.679-.265-1.354-.265-2.009s.089-1.33,.265-2.009c.055-.213-.035-.437-.221-.552l-.753-.465c-.455-.28-.772-.721-.896-1.241-.123-.52-.036-1.057,.244-1.511,.58-.939,1.814-1.232,2.752-.651l.753,.465c.187,.114,.426,.095,.592-.05,.862-.756,1.841-1.305,2.91-1.634,.21-.064,.353-.258,.353-.478v-.875c0-1.103,.897-2,2-2s2,.897,2,2v.875c0,.22,.143,.413,.353,.478,1.069,.329,2.048,.878,2.91,1.634,.166,.145,.406,.164,.592,.05l.753-.465c.938-.581,2.172-.288,2.752,.651,.28,.454,.367,.991,.244,1.511-.123,.521-.441,.961-.896,1.241l-.753,.465c-.187,.115-.276,.339-.221,.552,.176,.679,.265,1.354,.265,2.009s-.089,1.33-.265,2.009c-.055,.213,.035,.437,.221,.552l.753,.465c.455,.28,.772,.721,.896,1.241,.123,.52,.036,1.057-.244,1.511ZM12,8c-2.206,0-4,1.794-4,4s1.794,4,4,4,4-1.794,4-4-1.794-4-4-4Zm0,7c-1.654,0-3-1.346-3-3s1.346-3,3-3,3,1.346,3,3-1.346,3-3,3Z" />
               </svg>
-            </div>
+              {showAdminNotice && adminClicks < 3 && (
+                <div className="absolute -bottom-1 -right-1 bg-gray-700 text-white text-xs px-2 py-1 rounded-full whitespace-nowrap">
+                  {3 - adminClicks} клик
+                  {(3 - adminClicks) % 10 === 1 ? "" : "ов"}
+                </div>
+              )}
+            </button>
             <h3 className="text-sm font-semibold text-gray-900">Параметры</h3>
           </div>
 
@@ -220,7 +259,7 @@ export default function Profile() {
               </label>
             </div>
 
-           {/* <div className="p-3 rounded-lg border border-gray-200 hover:border-gray-300 transition-colors">
+            {/* <div className="p-3 rounded-lg border border-gray-200 hover:border-gray-300 transition-colors">
               <label className="flex items-center gap-3 cursor-pointer">
                 <input
                   type="checkbox"

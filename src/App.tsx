@@ -1,5 +1,11 @@
 import { useEffect, useState } from "react";
-import { ShiftCalculator, Statistics, Profile, Leaderboard } from "./screens";
+import {
+  ShiftCalculator,
+  Statistics,
+  Profile,
+  Leaderboard,
+  Admin,
+} from "./screens";
 import { useShiftsStore } from "./store";
 import Tabs from "./components/Tabs";
 import {
@@ -12,7 +18,7 @@ import {
 } from "./utils/useUserSettingsSync";
 import { initTelegram } from "./utils/telegram";
 
-type TabId = "calculator" | "statistics" | "leaderboard" | "profile";
+type TabId = "calculator" | "statistics" | "leaderboard" | "profile" | "admin";
 
 const tabs = [
   { id: "calculator", label: "Расчёт" },
@@ -78,7 +84,16 @@ export default function App() {
       case "leaderboard":
         return <Leaderboard />;
       case "profile":
-        return <Profile />;
+        return (
+          <Profile
+            onAdminAccess={() => {
+              console.log("🔐 Admin access granted!");
+              setActiveTab("admin");
+            }}
+          />
+        );
+      case "admin":
+        return <Admin />;
       default:
         return <ShiftCalculator />;
     }
