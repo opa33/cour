@@ -208,7 +208,6 @@ export default function Calendar({
         >
           <div className="flex flex-col items-center justify-center">
             {NavIcons.today}
-            <p className="text-gray-700 ml-1 text-xs">Сегодня</p>
           </div>
         </button>
 

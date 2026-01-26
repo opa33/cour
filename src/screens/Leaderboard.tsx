@@ -166,37 +166,6 @@ export default function Leaderboard() {
                 {formatCurrency(userStats.earnings, currency)}
               </p>
             </div>
-            <div className="grid grid-cols-2 gap-3 pt-3 border-t border-gray-200">
-              <div>
-                <p className="text-xs text-gray-500 font-medium">Заказы</p>
-                <p className="text-lg font-semibold text-gray-900">
-                  {userStats.ordersCount}
-                </p>
-              </div>
-              <div>
-                <p className="text-xs text-gray-500 font-medium">Часы</p>
-                <p className="text-lg font-semibold text-gray-900">
-                  {userStats.hoursWorked.toFixed(1)}ч
-                </p>
-              </div>
-              <div className="col-span-2 pt-2 border-t border-gray-200">
-                <p className="text-xs text-gray-500 font-medium mb-1">
-                  Средняя производительность
-                </p>
-                <div className="grid grid-cols-2 gap-2">
-                  <div className="text-sm text-gray-700">
-                    <span className="font-semibold">
-                      {userStats.hoursWorked > 0
-                        ? (userStats.earnings / userStats.hoursWorked).toFixed(
-                            0,
-                          )
-                        : 0}
-                    </span>
-                    <span className="text-gray-600"> {currency}/ч</span>
-                  </div>
-                </div>
-              </div>
-            </div>
           </div>
         </Card>
 
@@ -279,7 +248,6 @@ export default function Leaderboard() {
                       </div>
                       <div className="grid grid-cols-2 gap-2 text-xs text-gray-600">
                         <div className="flex items-center gap-1">
-                          <span>📦</span>
                           <span>
                             {courier.ordersCount} заказ
                             {courier.ordersCount % 10 === 1 &&
@@ -289,7 +257,6 @@ export default function Leaderboard() {
                           </span>
                         </div>
                         <div className="flex items-center gap-1">
-                          <span>⏱️</span>
                           <span>{courier.hoursWorked.toFixed(1)}ч</span>
                         </div>
                         {courier.hoursWorked > 0 && (
