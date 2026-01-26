@@ -38,26 +38,45 @@ export default function Leaderboard() {
     ordersCount: 0,
     hoursWorked: 0,
   });
+  const [displayMonth, setDisplayMonth] = useState<string>(
+    new Date().toISOString().slice(0, 7),
+  ); // YYYY-MM
 
   // Get current user data
   const currentUserId =
     localStorage.getItem("courier-finance:user-id") || "dev";
 
-  // Calculate current month dates
-  const today = useMemo(() => new Date(), []);
+  // Get month/year from displayMonth
+  const [displayYear, displayMonthNum] = useMemo(
+    () =>
+      displayMonth.split("-").map((v) => parseInt(v, 10)) as [number, number],
+    [displayMonth],
+  );
+
+  // Calculate month start and end dates
   const monthStart = useMemo(
     () =>
-      `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-01`,
-    [today],
+      `${String(displayYear).padStart(4, "0")}-${String(displayMonthNum).padStart(2, "0")}-01`,
+    [displayYear, displayMonthNum],
   );
 
   const monthEnd = useMemo(
-    () =>
-      new Date(today.getFullYear(), today.getMonth() + 1, 0)
-        .toISOString()
-        .split("T")[0],
-    [today],
+    () => new Date(displayYear, displayMonthNum, 0).toISOString().split("T")[0],
+    [displayYear, displayMonthNum],
   );
+
+  // Month navigation handlers - simpler approach
+  const handlePreviousMonth = () => {
+    const date = new Date(displayMonth + "-01");
+    date.setMonth(date.getMonth() - 1);
+    setDisplayMonth(date.toISOString().slice(0, 7));
+  };
+
+  const handleNextMonth = () => {
+    const date = new Date(displayMonth + "-01");
+    date.setMonth(date.getMonth() + 1);
+    setDisplayMonth(date.toISOString().slice(0, 7));
+  };
 
   // Load leaderboard data from Supabase
   useEffect(() => {
@@ -128,7 +147,7 @@ export default function Leaderboard() {
     };
 
     loadLeaderboard();
-  }, [monthStart, monthEnd, leaderboardOptIn, currentUserId]);
+  }, [monthStart, monthEnd, leaderboardOptIn, currentUserId, displayMonth]);
 
   // Get medal emoji
   const getMedal = (rank: number): string => {
@@ -154,6 +173,63 @@ export default function Leaderboard() {
             Лучшие курьеры месяца (кто больше спиздил)
           </p>
         </div>
+
+        {/* Month Navigation */}
+        <Card variant="elevated" className="mb-6">
+          <div className="flex items-center justify-between">
+            <button
+              onClick={handlePreviousMonth}
+              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            >
+              <svg
+                className="w-5 h-5 text-gray-600"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <polyline points="15 18 9 12 15 6"></polyline>
+              </svg>
+            </button>
+
+            <div className="text-center">
+              <p className="text-sm font-semibold text-gray-900">
+                {new Date(displayYear, displayMonthNum - 1)
+                  .toLocaleDateString("ru-RU", {
+                    month: "long",
+                    year: "numeric",
+                  })
+                  .charAt(0)
+                  .toUpperCase() +
+                  new Date(displayYear, displayMonthNum - 1)
+                    .toLocaleDateString("ru-RU", {
+                      month: "long",
+                      year: "numeric",
+                    })
+                    .slice(1)}
+              </p>
+            </div>
+
+            <button
+              onClick={handleNextMonth}
+              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            >
+              <svg
+                className="w-5 h-5 text-gray-600"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <polyline points="9 18 15 12 9 6"></polyline>
+              </svg>
+            </button>
+          </div>
+        </Card>
 
         {/* Your Results Card */}
         <Card variant="elevated" className="mb-6">

@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo } from "react";
-import { Button, Card, NumberInput } from "../components";
+import { Button, Card, NumberInput, TimeInput } from "../components";
 import { calculateShift, type CalculationParams } from "../utils/calculations";
 import { useUserStore, useShiftsStore } from "../store";
 import { syncShift, isSupabaseConfigured } from "../utils/supabase";
@@ -233,14 +233,14 @@ export default function ShiftCalculator() {
                 />
               </div>
 
-              {/* Minutes */}
-              <NumberInput
-                label="Минуты работы"
-                type="number"
-                min={0}
-                value={currentShift.minutes || ""}
-                onChange={(e) => handleInputChange("minutes", e.target.value)}
-                placeholder="480"
+              {/* Time Input - New Component */}
+              <TimeInput
+                label="Время работы"
+                value={currentShift.minutes || 0}
+                onChange={(minutes: number) =>
+                  handleInputChange("minutes", minutes)
+                }
+                placeholder="8:30"
               />
 
               {/* Zone Orders */}
