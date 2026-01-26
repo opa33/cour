@@ -88,37 +88,31 @@ export default function Leaderboard() {
             });
             console.log("✅ Leaderboard entries:", entries);
             setLeaderboardData(entries);
+
+            // Ищем статистику текущего пользователя в entries
+            const currentUserEntry = entries.find(
+              (entry) => entry.userId === currentUserId,
+            );
+            if (currentUserEntry) {
+              setUserStats({
+                earnings: currentUserEntry.earnings,
+                ordersCount: currentUserEntry.ordersCount,
+                hoursWorked: currentUserEntry.hoursWorked,
+              });
+            } else {
+              setUserStats({
+                earnings: earnings,
+                ordersCount: 0,
+                hoursWorked: 0,
+              });
+            }
           } else {
             console.log("⚠️ No leaderboard data returned");
             setLeaderboardData([]);
-          }
-
-          // Подсчитываем статистику текущего пользователя
-          if (earnings > 0) {
-            const userOrders =
-              currentData
-                ?.filter((item: any) => item.telegram_id === currentUserId)
-                .reduce(
-                  (sum: number, item: any) =>
-                    sum +
-                    (item.zone1 || 0) +
-                    (item.zone2 || 0) +
-                    (item.zone3 || 0),
-                  0,
-                ) || 0;
-
-            const userMinutes =
-              currentData
-                ?.filter((item: any) => item.telegram_id === currentUserId)
-                .reduce(
-                  (sum: number, item: any) => sum + (item.total_minutes || 0),
-                  0,
-                ) || 0;
-
             setUserStats({
               earnings: earnings,
-              ordersCount: userOrders,
-              hoursWorked: userMinutes / 60,
+              ordersCount: 0,
+              hoursWorked: 0,
             });
           }
         } else {
