@@ -21,7 +21,7 @@ module.exports = {
     function ({ addUtilities }) {
       addUtilities({
         ".pb-safe": {
-          paddingBottom: "max(1.5rem, env(safe-area-inset-bottom))",
+          paddingBottom: "max(1.2rem, env(safe-area-inset-bottom))",
         },
         ".pt-safe": {
           paddingTop: "max(0px, env(safe-area-inset-top))",
