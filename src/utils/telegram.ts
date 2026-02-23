@@ -4,8 +4,24 @@
 export const initTelegram = () => {
   const w = window as any;
   if (typeof w !== "undefined" && w.Telegram?.WebApp) {
-    w.Telegram.WebApp.ready();
-    return w.Telegram.WebApp;
+    const webApp = w.Telegram.WebApp;
+    webApp.ready();
+    webApp.expand(); // Expand to full available height
+
+    // Update CSS variables for safe area insets
+    const updateSafeArea = () => {
+      const root = document.documentElement;
+      const insets = webApp.safeAreaInset || {};
+      root.style.setProperty("--safe-area-top", `${insets.top || 0}px`);
+      root.style.setProperty("--safe-area-bottom", `${insets.bottom || 0}px`);
+      root.style.setProperty("--safe-area-left", `${insets.left || 0}px`);
+      root.style.setProperty("--safe-area-right", `${insets.right || 0}px`);
+    };
+
+    updateSafeArea();
+    webApp.onEvent("safeAreaChanged", updateSafeArea);
+
+    return webApp;
   }
   return null;
 };

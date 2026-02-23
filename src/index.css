@@ -2,6 +2,14 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  /* Safe area insets from Telegram (updated via JS) */
+  --safe-area-top: env(safe-area-inset-top, 0px);
+  --safe-area-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-area-left: env(safe-area-inset-left, 0px);
+  --safe-area-right: env(safe-area-inset-right, 0px);
+}
+
 .mulish-font {
   font-family: "Mulish", sans-serif;
   font-optical-sizing: auto;
@@ -22,20 +30,26 @@ body,
   margin: 0;
   padding: 0;
   background: #ffffff;
-  /* iOS safe-area support */
-  padding-top: max(0px, env(safe-area-inset-top));
-  padding-left: max(0px, env(safe-area-inset-left));
-  padding-right: max(0px, env(safe-area-inset-right));
   overflow-x: hidden;
 }
 
 body {
-  font-family: 'Mulish', -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
+  font-family:
+    "Mulish",
+    -apple-system,
+    BlinkMacSystemFont,
+    "SF Pro Text",
+    sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   /* iOS-specific fixes */
   -webkit-user-select: none;
   -webkit-touch-callout: none;
+}
+
+/* Apply safe area padding only to bottom (for tab bar, etc.) */
+#root {
+  padding-bottom: var(--safe-area-bottom);
 }
 
 /* Prevent zoom on input focus (iOS) */
