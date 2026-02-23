@@ -47,8 +47,9 @@ body {
   -webkit-touch-callout: none;
 }
 
-/* Apply safe area padding only to bottom (for tab bar, etc.) */
+/* Apply safe area padding */
 #root {
+  padding-top: max(8px, var(--safe-area-top));
   padding-bottom: var(--safe-area-bottom);
 }
 
