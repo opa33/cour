@@ -49,7 +49,7 @@ body {
 
 /* Apply safe area padding */
 #root {
-  padding-top: max(20px, var(--safe-area-top));
+  padding-top: max(40px, var(--safe-area-top));
   padding-bottom: var(--safe-area-bottom);
 }
 
