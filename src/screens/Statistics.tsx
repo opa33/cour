@@ -1,189 +1,131 @@
-import { useState, useMemo, lazy, Suspense } from "react";
+import { lazy, Suspense, useMemo, useState } from "react";
 import { useShiftsStore, useUserStore } from "../store";
-import {
-  formatDate,
-  formatCurrency,
-  formatMinutesReadable,
-} from "../utils/formatting";
-import Card from "../components/Card";
-import Calendar from "../components/Calendar";
-import Button from "../components/Button";
+import { formatCurrency, formatDate, formatMinutesReadable } from "../utils/formatting";
+import { Button, Card, Calendar } from "../components";
 
-// Lazy load charts
 const ChartsContainer = lazy(() =>
-  import("../components/ChartsContainer").then((m) => ({
-    default: m.ChartsContainer,
+  import("../components/ChartsContainer").then((module) => ({
+    default: module.ChartsContainer,
   })),
 );
+
+const getMonthBounds = (date = new Date()) => {
+  const year = date.getFullYear();
+  const month = date.getMonth();
+  return {
+    start: `${year}-${String(month + 1).padStart(2, "0")}-01`,
+    end: `${year}-${String(month + 1).padStart(2, "0")}-${String(new Date(year, month + 1, 0).getDate()).padStart(2, "0")}`,
+  };
+};
 
 export default function Statistics() {
   const shifts = useShiftsStore((state: any) => state.shifts);
   const { updateCurrentShift, deleteShift } = useShiftsStore();
   const currency = useUserStore((state: any) => state.settings.currency);
-  const fuelTrackingEnabled = useUserStore(
-    (state: any) => state.settings.fuelTrackingEnabled,
-  );
+  const fuelTrackingEnabled = useUserStore((state: any) => state.settings.fuelTrackingEnabled);
 
-  // State management
-  const [selectedDate] = useState(new Date().toISOString().split("T")[0]);
   const [rangeStart, setRangeStart] = useState("");
   const [rangeEnd, setRangeEnd] = useState("");
-  const [displayMonth] = useState<string>(new Date().toISOString().slice(0, 7)); // YYYY-MM
-  const [actionModalOpen, setActionModalOpen] = useState(false);
-  const [selectedShiftForAction, setSelectedShiftForAction] = useState<
-    string | null
-  >(null);
+  const [selectedShiftDate, setSelectedShiftDate] = useState<string | null>(null);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
 
-  // Get month/year from displayMonth
-  const [displayYear, displayMonthNum] = useMemo(
-    () =>
-      displayMonth.split("-").map((v) => parseInt(v, 10)) as [number, number],
-    [displayMonth],
-  );
-
-  // Calculate month start and end dates
-  const monthStart = useMemo(
-    () =>
-      `${String(displayYear).padStart(4, "0")}-${String(displayMonthNum).padStart(2, "0")}-01`,
-    [displayYear, displayMonthNum],
-  );
-
-  const monthEnd = useMemo(
-    () => new Date(displayYear, displayMonthNum, 0).toISOString().split("T")[0],
-    [displayYear, displayMonthNum],
-  );
-
-  // For period view - use range if selected, otherwise use month
-  const pStart = rangeStart || monthStart;
-  const pEnd = rangeEnd || monthEnd;
+  const monthBounds = useMemo(() => getMonthBounds(), []);
+  const periodStart = rangeStart || monthBounds.start;
+  const periodEnd = rangeEnd || monthBounds.end;
+  const hasCustomRange = Boolean(rangeStart && rangeEnd);
 
   const periodShifts = useMemo(
-    () => shifts.filter((s: any) => s.date >= pStart && s.date <= pEnd),
-    [shifts, pStart, pEnd],
+    () => shifts
+      .filter((shift: any) => shift.date >= periodStart && shift.date <= periodEnd)
+      .sort((a: any, b: any) => b.date.localeCompare(a.date)),
+    [periodEnd, periodStart, shifts],
   );
 
-  const totalIncome = useMemo(
-    () =>
-      periodShifts.reduce((sum: number, s: any) => sum + s.totalWithoutTax, 0),
-    [periodShifts],
-  );
-  const totalIncomeWithTax = useMemo(
-    () => periodShifts.reduce((sum: number, s: any) => sum + s.totalWithTax, 0),
-    [periodShifts],
-  );
-  const totalWithFuel = useMemo(
-    () => periodShifts.reduce((sum: number, s: any) => sum + s.netProfit, 0),
-    [periodShifts],
-  );
-  const totalKm = useMemo(
-    () => periodShifts.reduce((sum: number, s: any) => sum + s.kilometers, 0),
-    [periodShifts],
-  );
-  const totalMinutes = useMemo(
-    () => periodShifts.reduce((sum: number, s: any) => sum + s.minutes, 0),
-    [periodShifts],
-  );
-  const totalOrders = useMemo(
-    () =>
-      periodShifts.reduce(
-        (sum: number, s: any) => sum + s.zone1 + s.zone2 + s.zone3,
-        0,
-      ),
-    [periodShifts],
+  const totals = useMemo(() => periodShifts.reduce(
+    (result: any, shift: any) => ({
+      income: result.income + shift.totalWithoutTax,
+      incomeWithTax: result.incomeWithTax + shift.totalWithTax,
+      netProfit: result.netProfit + shift.netProfit,
+      minutes: result.minutes + shift.minutes,
+      orders: result.orders + shift.zone1 + shift.zone2 + shift.zone3,
+      kilometers: result.kilometers + shift.kilometers,
+    }),
+    { income: 0, incomeWithTax: 0, netProfit: 0, minutes: 0, orders: 0, kilometers: 0 },
+  ), [periodShifts]);
+
+  const shiftsByDate = useMemo(
+    () => shifts.reduce((result: Record<string, number>, shift: any) => {
+      result[shift.date] = shift.totalWithTax;
+      return result;
+    }, {}),
+    [shifts],
   );
 
-  // Calculate efficiency metrics
-  const incomePerHour = useMemo(
-    () => (totalMinutes > 0 ? (totalIncome / totalMinutes) * 60 : 0),
-    [totalIncome, totalMinutes],
-  );
-
-  const incomePerKm = useMemo(
-    () => (totalKm > 0 ? totalIncome / totalKm : 0),
-    [totalIncome, totalKm],
-  );
-
-  // Prepare chart data
   const chartData = useMemo(
-    () =>
-      periodShifts.map((s: any) => ({
-        date: s.date,
-        income: s.totalWithoutTax,
-        netProfit: s.netProfit,
-        kilometers: s.kilometers,
+    () => [...periodShifts]
+      .reverse()
+      .map((shift: any) => ({
+        date: shift.date,
+        income: shift.totalWithoutTax,
+        netProfit: shift.netProfit,
+        kilometers: shift.kilometers,
       })),
     [periodShifts],
   );
 
-  // Prepare shifts by date map for calendar
-  const shiftsByDate = useMemo(
-    () =>
-      shifts.reduce((acc: Record<string, number>, s: any) => {
-        acc[s.date] = s.totalWithTax;
-        return acc;
-      }, {}),
-    [shifts],
-  );
+  const incomePerHour = totals.minutes ? (totals.income / totals.minutes) * 60 : 0;
+  const incomePerKm = totals.kilometers ? totals.income / totals.kilometers : 0;
+  const maxCalendarValue = Math.max(...(Object.values(shiftsByDate) as number[]), 5000);
+  const periodTitle = hasCustomRange
+    ? `${formatDate(periodStart)} — ${formatDate(periodEnd)}`
+    : new Date(`${periodStart}T12:00:00`).toLocaleDateString("ru-RU", { month: "long", year: "numeric" });
 
-  // Action handlers
-  const handleEditShift = (date: string) => {
-    const shiftToEdit = shifts.find((s: any) => s.date === date);
-    if (shiftToEdit) {
-      updateCurrentShift(shiftToEdit);
-      setActionModalOpen(false);
-      setSelectedShiftForAction(null);
-      setStatusMessage(
-        "Смена загружена. Перейдите на экран Расчёт для редактирования.",
-      );
-      setTimeout(() => setStatusMessage(null), 3000);
-    }
+  const showStatus = (message: string) => {
+    setStatusMessage(message);
+    window.setTimeout(() => setStatusMessage(null), 3000);
   };
 
-  const handleDeleteShift = (date: string) => {
-    if (window.confirm(`Удалить смену от ${formatDate(date)}?`)) {
-      deleteShift(date);
-      setActionModalOpen(false);
-      setSelectedShiftForAction(null);
-      setStatusMessage("Смена удалена!");
-      setTimeout(() => setStatusMessage(null), 3000);
-    }
+  const closeActions = () => setSelectedShiftDate(null);
+
+  const handleEditShift = () => {
+    const shift = shifts.find((item: any) => item.date === selectedShiftDate);
+    if (!shift) return;
+    updateCurrentShift(shift);
+    closeActions();
+    showStatus("Смена загружена. Откройте «Расчёт», чтобы изменить её.");
   };
 
-  const handleShiftClick = (date: string) => {
-    setSelectedShiftForAction(date);
-    setActionModalOpen(true);
+  const handleDeleteShift = () => {
+    if (!selectedShiftDate || !window.confirm(`Удалить смену от ${formatDate(selectedShiftDate)}?`)) return;
+    deleteShift(selectedShiftDate);
+    closeActions();
+    showStatus("Смена удалена.");
   };
 
   return (
     <div className="min-h-screen bg-white p-4 pb-safe pl-safe pr-safe">
-      <div className="max-w-md mx-auto">
-        {/* Header */}
-        <div className="mb-6">
-          <h1 className="text-2xl font-semibold text-gray-900">Статистика</h1>
-          {(rangeStart || rangeEnd) && (
-            <p className="text-sm text-gray-500 mt-2">
-              {formatDate(rangeStart || selectedDate)} —{" "}
-              {formatDate(rangeEnd || selectedDate)}
-            </p>
-          )}
-          <div className="mt-4 rounded-3xl bg-slate-950 p-4 text-white shadow-xl shadow-slate-900/10">
-            <p className="text-xs uppercase tracking-[0.2em] text-slate-400">
-              Фокус на результате
-            </p>
-            <p className="text-sm mt-2 text-slate-200">
-              Просматривайте доходы, эффективность и историю смен в одном месте.
-            </p>
-          </div>
-          {statusMessage && (
-            <div className="mt-4 p-3 bg-blue-50 border border-blue-200 text-blue-800 rounded-lg text-sm">
-              {statusMessage}
+      <main className="mx-auto max-w-md space-y-5">
+        <header className="pt-1">
+          <p className="text-xs font-medium uppercase tracking-[0.18em] text-slate-400">Ваши смены</p>
+          <div className="mt-2 flex items-end justify-between gap-4">
+            <div>
+              <h1 className="text-3xl font-semibold tracking-tight text-slate-950">Статистика</h1>
+              <p className="mt-1 text-sm text-slate-500">Доходы, темп работы и история смен.</p>
             </div>
-          )}
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-right">
+              <p className="text-[11px] text-slate-500">Смен</p>
+              <p className="text-lg font-semibold tabular-nums text-slate-900">{periodShifts.length}</p>
+            </div>
+          </div>
+        </header>
+
+        <div className={`grid transition-[grid-template-rows,opacity,margin] duration-300 ${statusMessage ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`} aria-live="polite">
+          <div className="overflow-hidden">
+            {statusMessage && <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm text-slate-700"><span aria-hidden="true">✓</span>{statusMessage}</div>}
+          </div>
         </div>
 
-        {/* Calendar View */}
-        <Card variant="elevated" className="mb-6">
+        <Card variant="elevated" className="rounded-2xl border-slate-100 p-4 shadow-sm shadow-slate-900/5">
           <Calendar
             shifts={shiftsByDate}
             rangeStart={rangeStart || undefined}
@@ -192,229 +134,82 @@ export default function Statistics() {
               setRangeStart(start);
               setRangeEnd(end);
             }}
-            maxValue={Math.max(
-              ...(Object.values(shiftsByDate) as number[]),
-              5000,
-            )}
+            maxValue={maxCalendarValue}
           />
         </Card>
 
-        {/* Period Info */}
-        {(rangeStart || rangeEnd) && (
-          <Card
-            variant="elevated"
-            className="mb-6 bg-gradient-to-r from-blue-50 to-blue-50 border border-blue-200"
-          >
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-blue-100 rounded-lg">
-                  <svg
-                    className="w-5 h-5 text-blue-600"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="1.5"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  >
-                    <rect x="3" y="4" width="18" height="18" rx="2" />
-                    <path d="M16 2v4M8 2v4M3 10h18" />
-                    <circle cx="9" cy="16" r="1" />
-                    <circle cx="15" cy="16" r="1" />
-                  </svg>
-                </div>
-                <div>
-                  <p className="text-xs text-blue-600 font-medium">ДИАПАЗОН</p>
-                  <p className="text-sm font-semibold text-blue-900">
-                    {formatDate(rangeStart)} — {formatDate(rangeEnd)}
-                  </p>
-                </div>
-              </div>
-              <button
-                onClick={() => {
-                  setRangeStart("");
-                  setRangeEnd("");
-                }}
-                className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-lg transition-colors"
-              >
+        <section className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <p className="text-xs font-medium uppercase tracking-[0.16em] text-slate-500">Выбранный период</p>
+              <h2 className="mt-1 capitalize text-sm font-semibold text-slate-900">{periodTitle}</h2>
+            </div>
+            {hasCustomRange && (
+              <button type="button" onClick={() => { setRangeStart(""); setRangeEnd(""); }} className="rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-600 transition hover:bg-slate-50 active:scale-95">
                 Сбросить
               </button>
-            </div>
-          </Card>
-        )}
-
-        {/* Income Stats */}
-        <div className="space-y-2 mb-6">
-          <div className="flex flex-row justify-left gap-2">
-            <div className="bg-gray-50 p-4 rounded-lg">
-              <p className="text-xs text-gray-600 mb-1">Доход с налогом</p>
-              <p className="text-xl font-semibold text-red-700">
-                {formatCurrency(totalIncomeWithTax, currency)}
-              </p>
-            </div>
-            <div className="bg-gray-50 p-4 rounded-lg">
-              <p className="text-xs text-gray-600 mb-1">Доход (чистый)</p>
-              <p className="text-xl font-semibold text-green-700">
-                {formatCurrency(totalIncome, currency)}
-              </p>
-            </div>
+            )}
           </div>
-          {fuelTrackingEnabled && (
-            <div className="bg-gray-50 p-4 rounded-lg">
-              <p className="text-xs text-gray-600 mb-1">После бензина</p>
-              <p
-                className={`text-xl font-semibold ${
-                  totalWithFuel > 0 ? "text-gray-900" : "text-red-700"
-                }`}
-              >
-                {formatCurrency(totalWithFuel, currency)}
-              </p>
-            </div>
-          )}
-        </div>
+          <p className="mt-2 text-xs leading-5 text-slate-500">Чтобы выбрать другой период, нажмите начальный и конечный дни в календаре.</p>
+        </section>
 
-        {/* Period Details */}
-        <Card variant="elevated" className="mb-6">
-          <h3 className="text-sm font-semibold text-gray-900 mb-4">
-            Итого за период
-          </h3>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <p className="text-xs text-gray-600 mb-1">Смены</p>
-              <p className="text-lg font-semibold text-gray-900">
-                {periodShifts.length}
-              </p>
-            </div>
-            <div>
-              <p className="text-xs text-gray-600 mb-1">Время работы</p>
-              <p className="text-lg font-semibold text-gray-900">
-                {formatMinutesReadable(totalMinutes)}
-              </p>
-            </div>
-            <div>
-              <p className="text-xs text-gray-600 mb-1">Заказов</p>
-              <p className="text-lg font-semibold text-gray-900">
-                {totalOrders}
-              </p>
-            </div>
-            <div>
-              <p className="text-xs text-gray-600 mb-1">Километры</p>
-              <p className="text-lg font-semibold text-gray-900">
-                {totalKm} км
-              </p>
-            </div>
+        <section className="grid grid-cols-2 gap-3">
+          <div className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm shadow-slate-900/5">
+            <p className="text-xs text-slate-500">Доход с налогом</p>
+            <p className="mt-2 text-xl font-semibold tracking-tight text-red-700">{formatCurrency(totals.incomeWithTax, currency)}</p>
           </div>
+          <div className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm shadow-slate-900/5">
+            <p className="text-xs text-slate-500">Чистый доход</p>
+            <p className="mt-2 text-xl font-semibold tracking-tight text-green-700">{formatCurrency(totals.income, currency)}</p>
+          </div>
+          {fuelTrackingEnabled && <div className="col-span-2 rounded-2xl border border-slate-100 bg-white p-4 shadow-sm shadow-slate-900/5">
+            <p className="text-xs text-slate-500">После бензина</p>
+            <p className={`mt-2 text-xl font-semibold tracking-tight ${totals.netProfit < 0 ? "text-red-700" : "text-slate-900"}`}>{formatCurrency(totals.netProfit, currency)}</p>
+          </div>}
+        </section>
+
+        <Card variant="elevated" className="rounded-2xl border-slate-100 p-4 shadow-sm shadow-slate-900/5">
+          <div className="mb-4 flex items-center justify-between"><h2 className="text-base font-semibold text-slate-900">Итоги</h2><span className="text-xs text-slate-500">за период</span></div>
+          <div className="grid grid-cols-2 divide-x divide-y divide-slate-100 overflow-hidden rounded-xl border border-slate-100">
+            {[
+              ["Смены", periodShifts.length],
+              ["Время", formatMinutesReadable(totals.minutes)],
+              ["Заказы", totals.orders],
+              ["Километры", `${totals.kilometers} км`],
+            ].map(([label, value]) => <div key={String(label)} className="p-3"><p className="text-xs text-slate-500">{label}</p><p className="mt-1 text-base font-semibold tabular-nums text-slate-900">{value}</p></div>)}
+          </div>
+          {periodShifts.length > 0 && <div className="mt-3 grid grid-cols-2 gap-3">
+            <div className="rounded-xl bg-slate-50 p-3"><p className="text-xs text-slate-500">Доход / час</p><p className="mt-1 text-base font-semibold text-slate-900">{formatCurrency(incomePerHour, currency)}</p></div>
+            <div className="rounded-xl bg-slate-50 p-3"><p className="text-xs text-slate-500">Доход / км</p><p className="mt-1 text-base font-semibold text-slate-900">{formatCurrency(incomePerKm, currency)}</p></div>
+          </div>}
         </Card>
 
-        {/* Efficiency Metrics */}
-        {periodShifts.length > 0 && (
-          <div className="grid grid-cols-2 gap-2 mb-6">
-            <div className="bg-gradient-to-br from-purple-50 to-purple-100 p-3 rounded-lg border border-purple-200">
-              <p className="text-xs text-purple-600 font-medium mb-1">
-                Доход/час
-              </p>
-              <p className="text-lg font-semibold text-purple-900">
-                {formatCurrency(incomePerHour, currency)}
-              </p>
-            </div>
-            <div className="bg-gradient-to-br from-orange-50 to-orange-100 p-3 rounded-lg border border-orange-200">
-              <p className="text-xs text-orange-600 font-medium mb-1">
-                Доход/км
-              </p>
-              <p className="text-lg font-semibold text-orange-900">
-                {formatCurrency(incomePerKm, currency)}
-              </p>
-            </div>
-          </div>
-        )}
+        <section>
+          <div className="mb-3 flex items-center justify-between"><h2 className="text-base font-semibold text-slate-900">Смены</h2><span className="text-xs text-slate-500">{periodShifts.length}</span></div>
+          {periodShifts.length ? <div className="space-y-2">
+            {periodShifts.map((shift: any) => <button key={shift.date} type="button" onClick={() => setSelectedShiftDate(shift.date)} className="w-full rounded-2xl border border-slate-100 bg-white p-4 text-left shadow-sm shadow-slate-900/5 transition duration-200 hover:border-slate-200 hover:bg-slate-50 active:scale-[0.99]">
+              <div className="flex items-start justify-between gap-3"><div><p className="font-semibold text-slate-900">{formatDate(shift.date)}</p><p className="mt-1 text-xs text-slate-500">{formatMinutesReadable(shift.minutes)} · {shift.zone1 + shift.zone2 + shift.zone3} заказов · {shift.kilometers} км</p></div><p className="text-sm font-semibold text-slate-900">{formatCurrency(shift.totalWithTax, currency)}</p></div>
+            </button>)}
+          </div> : <Card variant="elevated" className="rounded-2xl border-slate-100 py-8 text-center text-sm text-slate-500 shadow-sm shadow-slate-900/5">Нет смен за выбранный период.</Card>}
+        </section>
 
-        {/* Shifts List */}
-        {periodShifts.length > 0 ? (
-          <Card variant="elevated">
-            <h3 className="text-sm font-semibold text-gray-900 mb-4">Смены</h3>
-            <div className="space-y-3">
-              {periodShifts.map((shift: any) => (
-                <div
-                  key={shift.date}
-                  onClick={() => handleShiftClick(shift.date)}
-                  className="p-3 border border-gray-200 rounded-lg hover:border-gray-300 cursor-pointer transition-all"
-                >
-                  <div className="flex justify-between items-start mb-2">
-                    <span className="text-sm font-medium text-gray-900">
-                      {formatDate(shift.date)}
-                    </span>
-                    <span className="text-sm font-semibold text-gray-900">
-                      {formatCurrency(shift.totalWithTax, currency)}
-                    </span>
-                  </div>
-                  <p className="text-xs text-gray-600">
-                    {formatMinutesReadable(shift.minutes)} •{" "}
-                    {shift.zone1 + shift.zone2 + shift.zone3} заказов •{" "}
-                    {shift.kilometers} км
-                  </p>
-                </div>
-              ))}
-            </div>
-          </Card>
-        ) : (
-          <Card variant="elevated" className="text-center py-8 text-gray-600">
-            <p>Нет смен за выбранный период</p>
-          </Card>
-        )}
-
-        {/* Charts */}
-        <Suspense
-          fallback={
-            <Card
-              variant="elevated"
-              className="mb-6 p-4 text-gray-600 text-center"
-            >
-              Загрузка...
-            </Card>
-          }
-        >
+        <Suspense fallback={<Card variant="elevated" className="rounded-2xl border-slate-100 py-8 text-center text-sm text-slate-500 shadow-sm shadow-slate-900/5">Загружаем графики…</Card>}>
           <ChartsContainer data={chartData} />
         </Suspense>
+      </main>
 
-        {/* Action Modal */}
-        {actionModalOpen && selectedShiftForAction && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-end z-50">
-            <div className="w-full bg-white rounded-t-2xl p-6 space-y-3 animate-slide-up">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">
-                {formatDate(selectedShiftForAction)}
-              </h2>
-
-              <Button
-                onClick={() => handleEditShift(selectedShiftForAction)}
-                className="w-full bg-gray-900 text-white"
-                size="lg"
-              >
-                Редактировать
-              </Button>
-
-              <Button
-                onClick={() => handleDeleteShift(selectedShiftForAction)}
-                className="w-full bg-red-600 text-white"
-                size="lg"
-              >
-                Удалить
-              </Button>
-
-              <Button
-                onClick={() => {
-                  setActionModalOpen(false);
-                  setSelectedShiftForAction(null);
-                }}
-                variant="outline"
-                className="w-full"
-                size="lg"
-              >
-                Отмена
-              </Button>
-            </div>
+      {selectedShiftDate && <div className="fixed inset-0 z-50 flex items-end bg-slate-950/30 p-0 sm:items-center sm:justify-center sm:p-4" role="dialog" aria-modal="true" aria-label="Действия со сменой" onClick={closeActions}>
+        <div className="w-full rounded-t-3xl border border-slate-100 bg-white p-5 shadow-2xl shadow-slate-900/20 animate-slide-up sm:max-w-md sm:rounded-3xl" onClick={(event) => event.stopPropagation()}>
+          <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-slate-200 sm:hidden" />
+          <p className="text-xs font-medium uppercase tracking-[0.16em] text-slate-400">Смена</p>
+          <h2 className="mt-1 text-lg font-semibold text-slate-900">{formatDate(selectedShiftDate)}</h2>
+          <div className="mt-5 space-y-2">
+            <Button onClick={handleEditShift} size="lg" className="w-full">Редактировать смену</Button>
+            <Button onClick={handleDeleteShift} variant="danger" size="lg" className="w-full">Удалить смену</Button>
+            <Button onClick={closeActions} variant="outline" size="lg" className="w-full">Отмена</Button>
           </div>
-        )}
-      </div>
+        </div>
+      </div>}
     </div>
   );
 }

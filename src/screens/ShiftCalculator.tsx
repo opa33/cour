@@ -101,7 +101,6 @@ export default function ShiftCalculator() {
     type: "success" | "error" | "info";
     text: string;
   } | null>(null);
-  const [usingMainButton, setUsingMainButton] = useState(false);
   const formVisible = !showResult;
   const resultsVisible = showResult && !!calculationResult;
 
@@ -203,70 +202,6 @@ export default function ShiftCalculator() {
       setIsSaving(false);
     }
   };
-
-  // Integrate with Telegram MainButton: show 'Сохранить' when results visible
-  useEffect(() => {
-    let off: any;
-    let mounted = true;
-
-    // dynamic import to avoid require() runtime error in browser
-    import("../utils/telegram")
-      .then((module) => {
-        if (!mounted) return;
-        const {
-          setMainButtonText,
-          showMainButton,
-          hideMainButton,
-          onMainButtonClick,
-        } = module;
-
-        if (showResult && calculationResult) {
-          try {
-            setMainButtonText(
-              isEditMode ? "Обновить смену" : "Сохранить смену",
-            );
-            showMainButton(true);
-            off = onMainButtonClick(() => {
-              handleSave();
-            });
-            setUsingMainButton(true);
-          } catch {
-            // ignore
-          }
-        } else {
-          try {
-            hideMainButton();
-            setUsingMainButton(false);
-          } catch {
-            // ignore
-          }
-        }
-      })
-      .catch(() => {
-        // dynamic import failed or not running inside Telegram
-        // ignore silently
-      });
-
-    return () => {
-      mounted = false;
-      try {
-        if (off) off();
-        try {
-          // ensure Telegram button hidden when leaving
-          const mod = (window as any).Telegram?.WebApp?.MainButton;
-          if (mod) {
-            mod.hide?.();
-          }
-        } catch {
-          // Telegram WebApp is unavailable.
-        }
-        setUsingMainButton(false);
-      } catch {
-        // No active Telegram button listener to remove.
-      }
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [showResult, calculationResult, isEditMode]);
 
   const handleCancel = () => {
     resetCurrentShift();
@@ -430,12 +365,6 @@ export default function ShiftCalculator() {
         >
           {calculationResult && (
           <div className="pt-1">
-            {usingMainButton && (
-              <div className="mb-4 flex items-center gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
-                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-emerald-200 text-base leading-none" aria-hidden="true">↓</span>
-                <p>Сохраните смену системной кнопкой Telegram внизу экрана.</p>
-              </div>
-            )}
             {/* Income Stats - Minimalist Style */}
             <div className="space-y-2 mb-6">
               <div className="flex justify-left gap-2">
@@ -592,17 +521,32 @@ export default function ShiftCalculator() {
               </div>
             </Card>
 
-            {/* Save Button (hidden when Telegram MainButton is used) */}
-            {!usingMainButton && (
+            <section className="mb-3 rounded-xl border border-slate-200 bg-slate-50 p-4">
+              <div className="flex items-start gap-3">
+                <span
+                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-700"
+                  aria-hidden="true"
+                >
+                  ✓
+                </span>
+                <div>
+                  <h3 className="text-sm font-semibold text-slate-900">
+                    Всё готово к сохранению
+                  </h3>
+                  <p className="mt-1 text-xs leading-5 text-slate-500">
+                    Проверьте итог и сохраните смену в журнале.
+                  </p>
+                </div>
+              </div>
               <Button
                 onClick={handleSave}
                 isLoading={isSaving}
                 size="lg"
-                className="w-full mt-2"
+                className="mt-4 w-full"
               >
-                {isEditMode ? "Обновить" : "Сохранить"}
+                {isEditMode ? "Обновить смену" : "Сохранить смену"}
               </Button>
-            )}
+            </section>
 
             {/* Back/Cancel Button */}
             <Button
