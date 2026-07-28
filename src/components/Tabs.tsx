@@ -72,35 +72,39 @@ const TabIcons: Record<string, React.ReactNode> = {
 export default function Tabs({ tabs, activeTab, onChange }: TabsProps) {
   return (
     <div
-      className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100"
+      className="pointer-events-none fixed inset-x-0 bottom-0 z-40 px-3 pt-2"
       style={{ paddingBottom: "max(0px, env(safe-area-inset-bottom))" }}
     >
-      <div className="flex justify-around items-center max-w-md mx-auto">
+      <nav
+        aria-label="Основная навигация"
+        className="pointer-events-auto mx-auto flex max-w-md items-center rounded-2xl border border-slate-200/80 bg-white/95 p-1.5 shadow-lg shadow-slate-900/10 backdrop-blur"
+      >
         {tabs.map((tab) => (
           <button
             key={tab.id}
+            type="button"
             onClick={() => onChange(tab.id)}
+            aria-current={activeTab === tab.id ? "page" : undefined}
             className={`
-              flex-1 py-4 px-2 text-center transition-colors duration-200
-              flex flex-col items-center gap-2 border-t-2
+              group flex min-w-0 flex-1 flex-col items-center justify-center gap-1.5 rounded-xl px-1 py-2.5
+              transition-all duration-200 active:scale-95
               ${
                 activeTab === tab.id
-                  ? "text-slate-950 border-slate-950"
-                  : "text-slate-400 border-transparent hover:text-slate-600"
+                  ? "bg-slate-950 text-white shadow-sm shadow-slate-900/15"
+                  : "text-slate-400 hover:bg-slate-50 hover:text-slate-700"
               }
             `}
             title={tab.label}
           >
-            {/* SVG Icon */}
-            <div className="flex items-center justify-center">
+            <div className={`flex h-5 items-center justify-center transition-transform duration-200 ${activeTab === tab.id ? "scale-105" : "group-hover:scale-105"}`}>
               {TabIcons[tab.id] || <span className="text-xl">{tab.icon}</span>}
             </div>
-            <span className="text-xs font-medium tracking-tight">
+            <span className="truncate text-[11px] font-medium leading-none tracking-tight">
               {tab.label}
             </span>
           </button>
         ))}
-      </div>
+      </nav>
     </div>
   );
 }

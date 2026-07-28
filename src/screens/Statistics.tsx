@@ -1,13 +1,7 @@
-import { lazy, Suspense, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useShiftsStore, useUserStore } from "../store";
 import { formatCurrency, formatDate, formatMinutesReadable } from "../utils/formatting";
 import { Button, Card, Calendar } from "../components";
-
-const ChartsContainer = lazy(() =>
-  import("../components/ChartsContainer").then((module) => ({
-    default: module.ChartsContainer,
-  })),
-);
 
 const getMonthBounds = (date = new Date()) => {
   const year = date.getFullYear();
@@ -16,6 +10,12 @@ const getMonthBounds = (date = new Date()) => {
     start: `${year}-${String(month + 1).padStart(2, "0")}-01`,
     end: `${year}-${String(month + 1).padStart(2, "0")}-${String(new Date(year, month + 1, 0).getDate()).padStart(2, "0")}`,
   };
+};
+
+const shiftDateKey = (date: string, days: number) => {
+  const result = new Date(`${date}T12:00:00`);
+  result.setDate(result.getDate() + days);
+  return `${result.getFullYear()}-${String(result.getMonth() + 1).padStart(2, "0")}-${String(result.getDate()).padStart(2, "0")}`;
 };
 
 export default function Statistics() {
@@ -61,24 +61,35 @@ export default function Statistics() {
     [shifts],
   );
 
-  const chartData = useMemo(
-    () => [...periodShifts]
-      .reverse()
-      .map((shift: any) => ({
-        date: shift.date,
-        income: shift.totalWithoutTax,
-        netProfit: shift.netProfit,
-        kilometers: shift.kilometers,
-      })),
-    [periodShifts],
-  );
-
   const incomePerHour = totals.minutes ? (totals.income / totals.minutes) * 60 : 0;
   const incomePerKm = totals.kilometers ? totals.income / totals.kilometers : 0;
   const maxCalendarValue = Math.max(...(Object.values(shiftsByDate) as number[]), 5000);
-  const periodTitle = hasCustomRange
-    ? `${formatDate(periodStart)} — ${formatDate(periodEnd)}`
-    : new Date(`${periodStart}T12:00:00`).toLocaleDateString("ru-RU", { month: "long", year: "numeric" });
+  const previousBounds = useMemo(() => {
+    if (!hasCustomRange) {
+      const previousMonth = new Date(`${periodStart}T12:00:00`);
+      previousMonth.setMonth(previousMonth.getMonth() - 1);
+      return getMonthBounds(previousMonth);
+    }
+
+    const length = Math.round(
+      (new Date(`${periodEnd}T12:00:00`).getTime() - new Date(`${periodStart}T12:00:00`).getTime()) / 86_400_000,
+    ) + 1;
+    return { start: shiftDateKey(periodStart, -length), end: shiftDateKey(periodStart, -1) };
+  }, [hasCustomRange, periodEnd, periodStart]);
+
+  const previousPeriod = useMemo(
+    () => shifts.filter((shift: any) => shift.date >= previousBounds.start && shift.date <= previousBounds.end),
+    [previousBounds, shifts],
+  );
+  const previousIncome = useMemo(
+    () => previousPeriod.reduce((sum: number, shift: any) => sum + shift.totalWithoutTax, 0),
+    [previousPeriod],
+  );
+  const incomeChange = previousIncome ? ((totals.income - previousIncome) / previousIncome) * 100 : null;
+  const bestShift = useMemo(
+    () => periodShifts.reduce((best: any, shift: any) => !best || shift.totalWithoutTax > best.totalWithoutTax ? shift : best, null),
+    [periodShifts],
+  );
 
   const showStatus = (message: string) => {
     setStatusMessage(message);
@@ -138,21 +149,6 @@ export default function Statistics() {
           />
         </Card>
 
-        <section className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <p className="text-xs font-medium uppercase tracking-[0.16em] text-slate-500">Выбранный период</p>
-              <h2 className="mt-1 capitalize text-sm font-semibold text-slate-900">{periodTitle}</h2>
-            </div>
-            {hasCustomRange && (
-              <button type="button" onClick={() => { setRangeStart(""); setRangeEnd(""); }} className="rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-600 transition hover:bg-slate-50 active:scale-95">
-                Сбросить
-              </button>
-            )}
-          </div>
-          <p className="mt-2 text-xs leading-5 text-slate-500">Чтобы выбрать другой период, нажмите начальный и конечный дни в календаре.</p>
-        </section>
-
         <section className="grid grid-cols-2 gap-3">
           <div className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm shadow-slate-900/5">
             <p className="text-xs text-slate-500">Доход с налогом</p>
@@ -184,6 +180,21 @@ export default function Statistics() {
           </div>}
         </Card>
 
+        {periodShifts.length > 0 && <section className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          {bestShift && <div className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm shadow-slate-900/5">
+            <p className="text-xs font-medium uppercase tracking-[0.16em] text-slate-500">Лучший день</p>
+            <p className="mt-2 text-lg font-semibold text-slate-900">{formatCurrency(bestShift.totalWithoutTax, currency)}</p>
+            <p className="mt-1 text-xs text-slate-500">{formatDate(bestShift.date)} · {bestShift.zone1 + bestShift.zone2 + bestShift.zone3} заказов</p>
+          </div>}
+          <div className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm shadow-slate-900/5">
+            <p className="text-xs font-medium uppercase tracking-[0.16em] text-slate-500">К прошлому периоду</p>
+            {incomeChange === null ? <p className="mt-2 text-sm font-medium text-slate-700">Нет данных для сравнения</p> : <>
+              <p className={`mt-2 text-lg font-semibold ${incomeChange >= 0 ? "text-green-700" : "text-red-700"}`}>{incomeChange >= 0 ? "+" : ""}{incomeChange.toFixed(0)}%</p>
+              <p className="mt-1 text-xs text-slate-500">Доход · смен: {periodShifts.length} / {previousPeriod.length}</p>
+            </>}
+          </div>
+        </section>}
+
         <section>
           <div className="mb-3 flex items-center justify-between"><h2 className="text-base font-semibold text-slate-900">Смены</h2><span className="text-xs text-slate-500">{periodShifts.length}</span></div>
           {periodShifts.length ? <div className="space-y-2">
@@ -193,9 +204,6 @@ export default function Statistics() {
           </div> : <Card variant="elevated" className="rounded-2xl border-slate-100 py-8 text-center text-sm text-slate-500 shadow-sm shadow-slate-900/5">Нет смен за выбранный период.</Card>}
         </section>
 
-        <Suspense fallback={<Card variant="elevated" className="rounded-2xl border-slate-100 py-8 text-center text-sm text-slate-500 shadow-sm shadow-slate-900/5">Загружаем графики…</Card>}>
-          <ChartsContainer data={chartData} />
-        </Suspense>
       </main>
 
       {selectedShiftDate && <div className="fixed inset-0 z-50 flex items-end bg-slate-950/30 p-0 sm:items-center sm:justify-center sm:p-4" role="dialog" aria-modal="true" aria-label="Действия со сменой" onClick={closeActions}>

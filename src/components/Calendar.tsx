@@ -15,6 +15,11 @@ const weekDays = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"];
 const toDateKey = (year: number, month: number, day: number) =>
   `${String(year).padStart(4, "0")}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
 
+const formatDailyEarnings = (value: number) =>
+  value >= 1000
+    ? `${(value / 1000).toLocaleString("ru-RU", { maximumFractionDigits: 1 })}к`
+    : Math.round(value).toLocaleString("ru-RU");
+
 export default function Calendar({
   shifts,
   selectedDate,
@@ -32,6 +37,8 @@ export default function Calendar({
   const [pendingStart, setPendingStart] = useState<string | null>(null);
   const isRangeMode = Boolean(onRangeChange);
   const [year, month] = displayMonth.split("-").map(Number);
+  const today = new Date();
+  const todayKey = toDateKey(today.getFullYear(), today.getMonth() + 1, today.getDate());
 
   const { daysInMonth, startingDayOfWeek } = useMemo(() => {
     const firstDay = new Date(year, month - 1, 1);
@@ -124,6 +131,7 @@ export default function Calendar({
           const date = toDateKey(year, month, day);
           const earnings = shifts[date] || 0;
           const isActive = date === normalizedStart || date === normalizedEnd || selectedDate === date;
+          const isToday = date === todayKey;
 
           return (
             <button
@@ -131,19 +139,15 @@ export default function Calendar({
               type="button"
               onClick={() => selectDay(date)}
               aria-label={`${day} ${monthLabel}${earnings ? `, доход ${Math.round(earnings)}` : ""}`}
-              className={`relative aspect-square rounded-xl border text-xs font-semibold tabular-nums transition duration-200 active:scale-95 ${getDayClass(earnings, date)}`}
+              className={`relative flex aspect-square flex-col items-center justify-center rounded-xl border text-xs font-semibold tabular-nums transition duration-200 active:scale-95 ${getDayClass(earnings, date)} ${isToday && !isActive ? "ring-1 ring-slate-300 ring-offset-1" : ""}`}
             >
               <span>{day}</span>
-              {earnings > 0 && <span className={`absolute bottom-1 left-1/2 h-1 w-1 -translate-x-1/2 rounded-full ${isActive ? "bg-white" : "bg-emerald-600"}`} />}
+              {earnings > 0 && <span className={`mt-0.5 text-[9px] font-medium leading-none ${isActive ? "text-white/80" : "text-slate-500"}`}>{formatDailyEarnings(earnings)}</span>}
             </button>
           );
         })}
       </div>
 
-      <div className="mt-5 flex items-center justify-between border-t border-slate-100 pt-4 text-xs text-slate-500">
-        <span>{pendingStart ? "Выберите последний день периода" : "Нажмите два дня, чтобы выбрать период"}</span>
-        <span className="flex items-center gap-1.5"><i className="h-2 w-2 rounded-full bg-emerald-400" /> Есть смена</span>
-      </div>
     </section>
   );
 }
