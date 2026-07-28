@@ -203,29 +203,47 @@ export default function ShiftCalculator() {
 
   // Integrate with Telegram MainButton: show 'Сохранить' when results visible
   useEffect(() => {
-    // lazy import helpers
-    const {
-      setMainButtonText,
-      showMainButton,
-      hideMainButton,
-      onMainButtonClick,
-    } = require("../utils/telegram");
-
     let off: any;
-    if (showResult && calculationResult) {
-      setMainButtonText(isEditMode ? "Обновить смену" : "Сохранить смену");
-      showMainButton(true);
-      off = onMainButtonClick(() => {
-        // call handleSave when Telegram MainButton is pressed
-        handleSave();
+    let mounted = true;
+
+    // dynamic import to avoid require() runtime error in browser
+    import("../utils/telegram")
+      .then((module) => {
+        if (!mounted) return;
+        const {
+          setMainButtonText,
+          showMainButton,
+          hideMainButton,
+          onMainButtonClick,
+        } = module;
+
+        if (showResult && calculationResult) {
+          try {
+            setMainButtonText(
+              isEditMode ? "Обновить смену" : "Сохранить смену",
+            );
+            showMainButton(true);
+            off = onMainButtonClick(() => {
+              handleSave();
+            });
+          } catch (e) {
+            // ignore
+          }
+        } else {
+          try {
+            hideMainButton();
+          } catch (e) {
+            // ignore
+          }
+        }
+      })
+      .catch((e) => {
+        // dynamic import failed or not running inside Telegram
+        // ignore silently
       });
-    } else {
-      try {
-        hideMainButton();
-      } catch (e) {}
-    }
 
     return () => {
+      mounted = false;
       try {
         if (off) off();
       } catch (e) {}
