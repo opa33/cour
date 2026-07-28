@@ -6,14 +6,18 @@ import {
   getShiftsInRange,
   initializeUser,
 } from "./supabase";
+import {
+  saveShiftsToLocalStorage,
+  loadShiftsFromLocalStorage,
+} from "./localStorage";
 
 /**
  * Hook for syncing shifts between localStorage and Supabase
  * Syncs on mount and whenever shifts change
  */
 export const useShiftsSync = () => {
-  const shifts = useShiftsStore((state: any) => state.shifts);
-  const isInitialized = useShiftsStore((state: any) => state.isInitialized);
+  const shifts = useShiftsStore((state) => state.shifts);
+  const isInitialized = useShiftsStore((state) => state.isInitialized);
   const syncTimeoutRef = useRef<ReturnType<typeof setTimeout>>(
     undefined as any,
   );
@@ -37,9 +41,10 @@ export const useShiftsSync = () => {
   }, []);
 
   useEffect(() => {
+    saveShiftsToLocalStorage(shifts);
+
     if (!isSupabaseConfigured()) return;
     if (!isInitialized) return; // Don't sync until data is loaded
-    if (shifts.length === 0) return;
 
     // Debounce sync to avoid too many requests
     if (syncTimeoutRef.current) {
@@ -71,6 +76,12 @@ export const useLoadShiftsFromSupabase = () => {
   const setShifts = useShiftsStore((state: any) => state.setShifts);
 
   const loadFromSupabase = async () => {
+    const localShifts = loadShiftsFromLocalStorage();
+    if (localShifts.length > 0) {
+      setShifts(localShifts);
+      console.log(`📥 Loaded ${localShifts.length} shifts from localStorage`);
+    }
+
     if (!isSupabaseConfigured()) {
       console.log("📍 Supabase not configured");
       return;

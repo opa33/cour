@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import type { ShiftRecord, CurrentShift } from "./types";
 import { getTodayDate } from "../utils";
+import { saveShiftsToLocalStorage } from "../utils/localStorage";
 
 interface ShiftsStore {
   shifts: ShiftRecord[];
@@ -11,6 +12,7 @@ interface ShiftsStore {
   saveCurrentShift: () => void;
   resetCurrentShift: () => void;
   setShifts: (shifts: ShiftRecord[]) => void;
+  saveShifts: () => void;
   setInitialized: (value: boolean) => void;
   deleteShift: (date: string) => void;
   getShiftByDate: (date: string) => ShiftRecord | undefined;
@@ -34,7 +36,7 @@ const EMPTY_SHIFT = (): CurrentShift => ({
   netProfit: 0,
 });
 
-export const useShiftsStore = create<ShiftsStore>((set: any, get: any) => ({
+export const useShiftsStore = create<ShiftsStore>((set, get) => ({
   shifts: [],
   currentShift: EMPTY_SHIFT(),
   isInitialized: false,
@@ -68,6 +70,7 @@ export const useShiftsStore = create<ShiftsStore>((set: any, get: any) => ({
     }
 
     set({ shifts: newShifts });
+    saveShiftsToLocalStorage(newShifts);
   },
 
   resetCurrentShift: () => {
@@ -76,6 +79,11 @@ export const useShiftsStore = create<ShiftsStore>((set: any, get: any) => ({
 
   setShifts: (shifts: ShiftRecord[]) => {
     set({ shifts });
+    saveShiftsToLocalStorage(shifts);
+  },
+
+  saveShifts: () => {
+    saveShiftsToLocalStorage(get().shifts);
   },
 
   setInitialized: (value: boolean) => {
@@ -83,10 +91,9 @@ export const useShiftsStore = create<ShiftsStore>((set: any, get: any) => ({
   },
 
   deleteShift: (date: string) => {
-    set((state: any) => ({
-      shifts: state.shifts.filter((s: ShiftRecord) => s.date !== date),
-    }));
-    setTimeout(() => get().saveShifts(), 0);
+    const newShifts = get().shifts.filter((s: ShiftRecord) => s.date !== date);
+    set({ shifts: newShifts });
+    saveShiftsToLocalStorage(newShifts);
   },
 
   getShiftByDate: (date: string) => {

@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import type { UserSettings } from "./types";
 import { getFirstName } from "../utils/telegram";
+import { saveUserSettingsToLocalStorage } from "../utils/localStorage";
 
 const DEFAULT_SETTINGS: UserSettings = {
   username: getFirstName() || "Курьер",
@@ -25,12 +26,15 @@ export const useUserStore = create<UserStore>((set) => ({
   settings: DEFAULT_SETTINGS,
 
   updateSettings: (partial: Partial<UserSettings>) => {
-    set((state: any) => ({
-      settings: { ...state.settings, ...partial },
-    }));
+    set((state: any) => {
+      const updatedSettings = { ...state.settings, ...partial };
+      saveUserSettingsToLocalStorage(updatedSettings);
+      return { settings: updatedSettings };
+    });
   },
 
   resetSettings: () => {
+    saveUserSettingsToLocalStorage(DEFAULT_SETTINGS);
     set({ settings: DEFAULT_SETTINGS });
   },
 }));

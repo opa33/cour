@@ -97,6 +97,10 @@ export default function ShiftCalculator() {
   > | null>(null);
   const [showResult, setShowResult] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [statusMessage, setStatusMessage] = useState<{
+    type: "success" | "error" | "info";
+    text: string;
+  } | null>(null);
 
   // Check if we're editing based on currentShift date matching existing shift
   const isEditMode = useMemo(() => {
@@ -144,6 +148,10 @@ export default function ShiftCalculator() {
     const result = calculateShift(params);
     setCalculationResult(result);
     setShowResult(true);
+    setStatusMessage({
+      type: "info",
+      text: "Результаты расчёта обновлены. Проверьте итог и сохраните смену.",
+    });
 
     // Update current shift with calculated values
     updateCurrentShift({
@@ -174,7 +182,10 @@ export default function ShiftCalculator() {
 
       // Show success feedback
       setTimeout(() => {
-        alert(isEditMode ? "✅ Смена обновлена!" : "✅ Смена сохранена!");
+        setStatusMessage({
+          type: "success",
+          text: isEditMode ? "Смена обновлена" : "Смена сохранена",
+        });
         resetCurrentShift();
         setShowResult(false);
         setCalculationResult(null);
@@ -182,10 +193,45 @@ export default function ShiftCalculator() {
       }, 300);
     } catch (error) {
       console.error("Failed to save shift:", error);
-      alert("❌ Ошибка при сохранении. Проверьте консоль.");
+      setStatusMessage({
+        type: "error",
+        text: "Ошибка при сохранении. Попробуйте ещё раз.",
+      });
       setIsSaving(false);
     }
   };
+
+  // Integrate with Telegram MainButton: show 'Сохранить' when results visible
+  useEffect(() => {
+    // lazy import helpers
+    const {
+      setMainButtonText,
+      showMainButton,
+      hideMainButton,
+      onMainButtonClick,
+    } = require("../utils/telegram");
+
+    let off: any;
+    if (showResult && calculationResult) {
+      setMainButtonText(isEditMode ? "Обновить смену" : "Сохранить смену");
+      showMainButton(true);
+      off = onMainButtonClick(() => {
+        // call handleSave when Telegram MainButton is pressed
+        handleSave();
+      });
+    } else {
+      try {
+        hideMainButton();
+      } catch (e) {}
+    }
+
+    return () => {
+      try {
+        if (off) off();
+      } catch (e) {}
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showResult, calculationResult, isEditMode]);
 
   const handleCancel = () => {
     resetCurrentShift();
@@ -206,6 +252,20 @@ export default function ShiftCalculator() {
             {isEditMode ? "Внесение смены" : "Расчёт смены"}
           </h1>
         </div>
+
+        {statusMessage && (
+          <div
+            className={`mb-6 rounded-3xl border px-4 py-3 text-sm font-medium ${
+              statusMessage.type === "success"
+                ? "bg-emerald-50 border-emerald-200 text-emerald-900"
+                : statusMessage.type === "error"
+                  ? "bg-rose-50 border-rose-200 text-rose-900"
+                  : "bg-sky-50 border-sky-200 text-sky-900"
+            }`}
+          >
+            {statusMessage.text}
+          </div>
+        )}
 
         {/* Input Form Card - Hidden when showing results */}
         {!showResult && (
@@ -298,7 +358,7 @@ export default function ShiftCalculator() {
               <Button
                 onClick={handleCalculate}
                 size="lg"
-                className="w-full mt-6 bg-gray-900 text-white"
+                className="w-full mt-6"
               >
                 Рассчитать
               </Button>
@@ -470,7 +530,7 @@ export default function ShiftCalculator() {
               onClick={handleSave}
               isLoading={isSaving}
               size="lg"
-              className="w-full bg-gray-900 text-white"
+              className="w-full mt-2"
             >
               {isEditMode ? "Обновить" : "Сохранить"}
             </Button>
@@ -502,6 +562,16 @@ export default function ShiftCalculator() {
           </>
         )}
       </div>
+      {showResult && (
+        <div className="fixed right-4 bottom-24 z-50">
+          <div className="flex items-center gap-3 bg-emerald-600 text-white px-3 py-2 rounded-full shadow-lg animate-pulse-slow">
+            <div className="w-2 h-2 rounded-full bg-white/90" />
+            <div className="text-sm font-semibold">
+              Нажмите кнопку Telegram для сохранения
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

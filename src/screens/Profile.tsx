@@ -4,13 +4,18 @@ import { useUserStore } from "../store";
 import type { UserSettings } from "../store/types";
 import { getTelegramUser, getFirstName } from "../utils/telegram";
 
-export default function Profile(props: any) {
+interface ProfileProps {
+  onAdminAccess?: () => void;
+}
+
+export default function Profile(props: ProfileProps) {
   const userSettings = useUserStore((state: any) => state.settings);
   const updateSettings = useUserStore((state: any) => state.updateSettings);
 
   const [formData, setFormData] = useState<UserSettings>(userSettings);
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   // Telegram user data
   const [telegramUser, setTelegramUser] = useState<any>(null);
@@ -51,13 +56,16 @@ export default function Profile(props: any) {
 
   const handleSave = async () => {
     setIsSaving(true);
+    setSaveError(null);
+
     try {
       updateSettings(formData);
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 3000);
     } catch (error) {
       console.error("Failed to save settings:", error);
-      alert("Ошибка сохранения");
+      setSaveError("Ошибка сохранения параметров. Попробуйте ещё раз.");
+      setSaveSuccess(false);
     } finally {
       setIsSaving(false);
     }
@@ -81,6 +89,17 @@ export default function Profile(props: any) {
   return (
     <div className="min-h-screen bg-white p-4 pb-safe pl-safe pr-safe">
       <div className="max-w-md mx-auto">
+        <div className="mb-6 rounded-3xl bg-slate-950 p-5 text-white shadow-xl shadow-slate-900/10">
+          <p className="text-xs uppercase tracking-[0.2em] text-slate-400 mb-2">
+            Профайл курьера
+          </p>
+          <h1 className="text-2xl font-semibold">
+            {formData.username || "Курьер"}
+          </h1>
+          <p className="text-sm text-slate-300 mt-1">
+            Настройки тарифа и участие в рейтинге
+          </p>
+        </div>
         {/* Header with Telegram Profile */}
         <div className="mb-8">
           <div className="flex items-center gap-4 mb-6">
@@ -259,7 +278,7 @@ export default function Profile(props: any) {
               </label>
             </div>
 
-            {/* <div className="p-3 rounded-lg border border-gray-200 hover:border-gray-300 transition-colors">
+            <div className="p-3 rounded-lg border border-gray-200 hover:border-gray-300 transition-colors">
               <label className="flex items-center gap-3 cursor-pointer">
                 <input
                   type="checkbox"
@@ -274,33 +293,25 @@ export default function Profile(props: any) {
                     Участвовать в рейтинге
                   </span>
                   <p className="text-xs text-gray-500 mt-0.5">
-                    Видны только имя и доход
+                    Видны только имя и доход, без личных данных
                   </p>
                 </div>
               </label>
-            </div> */}
+            </div>
           </div>
         </Card>
 
-        {/* Success Message */}
         {saveSuccess && (
-          <div className="mb-4 p-3 bg-green-100 border border-green-300 text-green-800 rounded text-sm text-center font-semibold flex items-center justify-center gap-2">
-            <svg
-              className="w-4 h-4"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <polyline points="20 6 9 17 4 12" />
-            </svg>
+          <div className="mb-4 p-3 bg-green-100 border border-green-300 text-green-800 rounded text-sm text-center font-semibold">
             Параметры сохранены!
           </div>
         )}
+        {saveError && (
+          <div className="mb-4 p-3 bg-red-100 border border-red-300 text-red-800 rounded text-sm text-center font-semibold">
+            {saveError}
+          </div>
+        )}
 
-        {/* Save Button */}
         <Button
           onClick={handleSave}
           isLoading={isSaving}

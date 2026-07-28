@@ -27,6 +27,66 @@ export const initTelegram = () => {
 };
 
 /**
+ * MainButton helpers
+ */
+export const setMainButtonText = (text: string) => {
+  const w = window as any;
+  if (w.Telegram?.WebApp?.MainButton?.setText) {
+    try {
+      w.Telegram.WebApp.MainButton.setText(text);
+    } catch (e) {
+      console.error("Failed to set MainButton text:", e);
+    }
+  }
+};
+
+export const showMainButton = (enabled = true) => {
+  const w = window as any;
+  try {
+    if (w.Telegram?.WebApp?.MainButton) {
+      w.Telegram.WebApp.MainButton.show();
+      if (enabled && w.Telegram.WebApp.MainButton.enable) {
+        w.Telegram.WebApp.MainButton.enable();
+      }
+    }
+  } catch (e) {
+    console.error("Failed to show MainButton:", e);
+  }
+};
+
+export const hideMainButton = () => {
+  const w = window as any;
+  try {
+    if (w.Telegram?.WebApp?.MainButton) {
+      w.Telegram.WebApp.MainButton.hide();
+    }
+  } catch (e) {
+    console.error("Failed to hide MainButton:", e);
+  }
+};
+
+export const onMainButtonClick = (cb: () => void) => {
+  const w = window as any;
+  if (w.Telegram?.WebApp?.MainButton?.onClick) {
+    try {
+      w.Telegram.WebApp.MainButton.onClick(cb);
+      return () => {
+        try {
+          if (w.Telegram.WebApp.MainButton.offClick) {
+            w.Telegram.WebApp.MainButton.offClick(cb);
+          }
+        } catch (e) {
+          // offClick may not exist
+        }
+      };
+    } catch (e) {
+      console.error("Failed to register MainButton click:", e);
+    }
+  }
+  return () => {};
+};
+
+/**
  * Get current user Telegram ID (auto-auth)
  */
 export const getUserId = (): string | null => {

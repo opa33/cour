@@ -33,6 +33,7 @@ export default function Statistics() {
   const [selectedShiftForAction, setSelectedShiftForAction] = useState<
     string | null
   >(null);
+  const [statusMessage, setStatusMessage] = useState<string | null>(null);
 
   // Get month/year from displayMonth
   const [displayYear, displayMonthNum] = useMemo(
@@ -132,7 +133,10 @@ export default function Statistics() {
       updateCurrentShift(shiftToEdit);
       setActionModalOpen(false);
       setSelectedShiftForAction(null);
-      alert("Смена загружена. Перейдите на экран 'Расчёт' для редактирования.");
+      setStatusMessage(
+        "Смена загружена. Перейдите на экран Расчёт для редактирования.",
+      );
+      setTimeout(() => setStatusMessage(null), 3000);
     }
   };
 
@@ -141,7 +145,8 @@ export default function Statistics() {
       deleteShift(date);
       setActionModalOpen(false);
       setSelectedShiftForAction(null);
-      alert("Смена удалена!");
+      setStatusMessage("Смена удалена!");
+      setTimeout(() => setStatusMessage(null), 3000);
     }
   };
 
@@ -161,6 +166,19 @@ export default function Statistics() {
               {formatDate(rangeStart || selectedDate)} —{" "}
               {formatDate(rangeEnd || selectedDate)}
             </p>
+          )}
+          <div className="mt-4 rounded-3xl bg-slate-950 p-4 text-white shadow-xl shadow-slate-900/10">
+            <p className="text-xs uppercase tracking-[0.2em] text-slate-400">
+              Фокус на результате
+            </p>
+            <p className="text-sm mt-2 text-slate-200">
+              Просматривайте доходы, эффективность и историю смен в одном месте.
+            </p>
+          </div>
+          {statusMessage && (
+            <div className="mt-4 p-3 bg-blue-50 border border-blue-200 text-blue-800 rounded-lg text-sm">
+              {statusMessage}
+            </div>
           )}
         </div>
 
@@ -287,7 +305,7 @@ export default function Statistics() {
             </div>
           </div>
         </Card>
-        
+
         {/* Efficiency Metrics */}
         {periodShifts.length > 0 && (
           <div className="grid grid-cols-2 gap-2 mb-6">

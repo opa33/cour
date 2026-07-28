@@ -80,7 +80,7 @@ export default function TimeInput({
 
   return (
     <div>
-      <label className="text-sm font-semibold text-gray-700 block mb-2">
+      <label className="text-sm font-semibold text-slate-700 block mb-2">
         {label}
       </label>
 
@@ -93,7 +93,7 @@ export default function TimeInput({
             value={displayValue}
             onChange={handleChange}
             placeholder={placeholder}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-transparent text-lg font-semibold text-center"
+            className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent bg-slate-50 text-lg font-semibold text-center border-slate-200"
             style={{
               fontSize: "16px",
               WebkitAppearance: "none",
@@ -135,7 +135,7 @@ export default function TimeInput({
                 placeholder="0"
                 value={value > 0 ? hours : ""}
                 onChange={handleHoursChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-transparent text-lg font-semibold text-center"
+                className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent bg-slate-50 text-lg font-semibold text-center border-slate-200"
                 style={{
                   fontSize: "16px",
                   WebkitAppearance: "none",
@@ -172,7 +172,7 @@ export default function TimeInput({
                 placeholder="0"
                 value={value > 0 ? mins : ""}
                 onChange={handleMinsChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-transparent text-lg font-semibold text-center"
+                className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent bg-slate-50 text-lg font-semibold text-center border-slate-200"
                 style={{
                   fontSize: "16px",
                   WebkitAppearance: "none",
@@ -186,7 +186,7 @@ export default function TimeInput({
 
       {/* Toggle and summary */}
       <div className="flex items-center justify-between mt-3">
-        <p className="text-xs text-gray-500">
+        <p className="text-xs text-slate-500">
           {hours}ч {mins}м = <span className="font-semibold">{value}</span>{" "}
           минут
         </p>
@@ -194,7 +194,7 @@ export default function TimeInput({
           onClick={() =>
             setInputMode(inputMode === "combined" ? "split" : "combined")
           }
-          className="text-xs text-blue-600 hover:text-blue-700 font-medium"
+          className="text-xs text-emerald-600 hover:text-emerald-700 font-medium"
         >
           {inputMode === "combined" ? "По частям" : "Вместе"}
         </button>

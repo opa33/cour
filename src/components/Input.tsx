@@ -20,9 +20,10 @@ export default function Input({
       )}
       <input
         className={`
-          px-3 py-2 border border-gray-300 rounded-lg transition-colors
-          focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent
-          ${error ? "border-red-500 bg-red-50" : "bg-white"}
+          px-3 py-2 border rounded-lg transition-colors
+          focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent
+          border-slate-200
+          ${error ? "border-rose-500 bg-rose-50" : "bg-slate-50"}
           ${className}
         `}
         style={

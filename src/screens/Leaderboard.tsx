@@ -1,7 +1,9 @@
 import { useMemo, useEffect, useState } from "react";
 import { Card } from "../components";
-import { useUserStore } from "../store";
+import { useShiftsStore, useUserStore } from "../store";
 import { formatCurrency } from "../utils/formatting";
+import { formatMonthYear } from "../utils/formatting";
+import { getUserId } from "../utils/telegram";
 import {
   getLeaderboard,
   getUserEarnings,
@@ -29,6 +31,8 @@ export default function Leaderboard() {
     (state: any) => state.settings.leaderboardOptIn,
   );
 
+  const shifts = useShiftsStore((state) => state.shifts);
+
   const [leaderboardData, setLeaderboardData] = useState<LeaderboardEntry[]>(
     [],
   );
@@ -42,9 +46,10 @@ export default function Leaderboard() {
     new Date().toISOString().slice(0, 7),
   ); // YYYY-MM
 
+  const isSupabaseActive = isSupabaseConfigured();
+
   // Get current user data
-  const currentUserId =
-    localStorage.getItem("courier-finance:user-id") || "dev";
+  const currentUserId = getUserId() || "dev";
 
   // Get month/year from displayMonth
   const [displayYear, displayMonthNum] = useMemo(
@@ -78,40 +83,56 @@ export default function Leaderboard() {
     setDisplayMonth(date.toISOString().slice(0, 7));
   };
 
-  // Load leaderboard data from Supabase
+  const localSummary = useMemo(() => {
+    const [yearPart, monthPart] = displayMonth.split("-").map(Number);
+    const filtered = shifts.filter((shift) => {
+      const [shiftYear, shiftMonth] = shift.date.split("-").map(Number);
+      return shiftYear === yearPart && shiftMonth === monthPart;
+    });
+
+    const earnings = filtered.reduce(
+      (sum, shift) => sum + shift.totalWithoutTax,
+      0,
+    );
+    const orders = filtered.reduce(
+      (sum, shift) => sum + shift.zone1 + shift.zone2 + shift.zone3,
+      0,
+    );
+    const minutes = filtered.reduce((sum, shift) => sum + shift.minutes, 0);
+
+    return {
+      earnings,
+      orders,
+      hoursWorked: minutes / 60,
+    };
+  }, [shifts, displayMonth]);
+
+  // Load leaderboard data from Supabase or fallback to local shifts
   useEffect(() => {
     const loadLeaderboard = async () => {
       try {
         setIsLoading(true);
-        console.log("🔄 Loading leaderboard...");
-        console.log(`Date range: ${monthStart} to ${monthEnd}`);
-        console.log(`Supabase configured: ${isSupabaseConfigured()}`);
 
         if (isSupabaseConfigured()) {
-          // Load current month data
           const currentData = await getLeaderboard(monthStart, monthEnd);
           const earnings = await getUserEarnings(monthStart, monthEnd);
-          console.log("📥 Received leaderboard data:", currentData);
-          console.log("💰 User earnings:", earnings);
 
           if (currentData && currentData.length > 0) {
-            const entries = currentData.map((item: any) => {
-              return {
-                rank: item.rank,
-                userId: item.telegram_id,
-                username: item.username,
-                earnings: item.total_earnings,
-                ordersCount: item.orders_count || 0,
-                hoursWorked: item.total_minutes ? item.total_minutes / 60 : 0,
-              };
-            });
-            console.log("✅ Leaderboard entries:", entries);
+            const entries = currentData.map((item: any) => ({
+              rank: item.rank,
+              userId: item.telegram_id,
+              username: item.username,
+              earnings: item.total_earnings,
+              ordersCount: item.orders_count || 0,
+              hoursWorked: item.total_minutes ? item.total_minutes / 60 : 0,
+            }));
+
             setLeaderboardData(entries);
 
-            // Ищем статистику текущего пользователя в entries
             const currentUserEntry = entries.find(
               (entry) => entry.userId === currentUserId,
             );
+
             if (currentUserEntry) {
               setUserStats({
                 earnings: currentUserEntry.earnings,
@@ -126,7 +147,6 @@ export default function Leaderboard() {
               });
             }
           } else {
-            console.log("⚠️ No leaderboard data returned");
             setLeaderboardData([]);
             setUserStats({
               earnings: earnings,
@@ -135,21 +155,36 @@ export default function Leaderboard() {
             });
           }
         } else {
-          console.log("⚠️ Supabase not configured");
           setLeaderboardData([]);
+          setUserStats({
+            earnings: localSummary.earnings,
+            ordersCount: localSummary.orders,
+            hoursWorked: localSummary.hoursWorked,
+          });
         }
       } catch (error) {
         console.error("Failed to load leaderboard:", error);
         setLeaderboardData([]);
+        setUserStats({
+          earnings: localSummary.earnings,
+          ordersCount: localSummary.orders,
+          hoursWorked: localSummary.hoursWorked,
+        });
       } finally {
         setIsLoading(false);
       }
     };
 
     loadLeaderboard();
-  }, [monthStart, monthEnd, leaderboardOptIn, currentUserId, displayMonth]);
+  }, [
+    monthStart,
+    monthEnd,
+    leaderboardOptIn,
+    currentUserId,
+    displayMonth,
+    localSummary,
+  ]);
 
-  // Get medal emoji
   const getMedal = (rank: number): string => {
     switch (rank) {
       case 1:
@@ -170,9 +205,22 @@ export default function Leaderboard() {
         <div className="mb-6">
           <h1 className="text-2xl font-semibold text-gray-900">Рейтинг</h1>
           <p className="text-sm text-gray-500 mt-1">
-            Лучшие курьеры месяца (кто больше спиздил)
+            Лучшие курьеры месяца по чистому доходу
           </p>
         </div>
+
+        {(!isSupabaseActive || !leaderboardOptIn) && (
+          <Card
+            variant="elevated"
+            className="mb-6 bg-yellow-50 border border-yellow-200"
+          >
+            <p className="text-sm text-yellow-900">
+              {!isSupabaseActive
+                ? "Supabase не подключен — рейтинг доступен только в локальном виде. Для данных за месяц используйте экран Статистика."
+                : "Вы не участвуете в рейтинге. Включите опцию в профиле, чтобы появляться в топе."}
+            </p>
+          </Card>
+        )}
 
         {/* Month Navigation */}
         <Card variant="elevated" className="mb-6">
@@ -196,19 +244,7 @@ export default function Leaderboard() {
 
             <div className="text-center">
               <p className="text-sm font-semibold text-gray-900">
-                {new Date(displayYear, displayMonthNum - 1)
-                  .toLocaleDateString("ru-RU", {
-                    month: "long",
-                    year: "numeric",
-                  })
-                  .charAt(0)
-                  .toUpperCase() +
-                  new Date(displayYear, displayMonthNum - 1)
-                    .toLocaleDateString("ru-RU", {
-                      month: "long",
-                      year: "numeric",
-                    })
-                    .slice(1)}
+                {formatMonthYear(displayMonth)}
               </p>
             </div>
 
@@ -245,6 +281,46 @@ export default function Leaderboard() {
           </div>
         </Card>
 
+        <Card variant="elevated" className="mb-6">
+          <div className="space-y-3">
+            <div>
+              <p className="text-xs font-semibold text-gray-600 mb-1">
+                ВАШ РЕЗУЛЬТАТ
+              </p>
+              <p className="text-2xl font-bold text-gray-900">
+                {formatCurrency(userStats.earnings, currency)}
+              </p>
+            </div>
+            <div className="grid grid-cols-3 gap-2 text-sm text-slate-600">
+              <div className="rounded-2xl bg-slate-50 p-3">
+                <p className="text-[10px] uppercase tracking-[0.2em] text-slate-400">
+                  Заказы
+                </p>
+                <p className="mt-2 font-semibold text-slate-900">
+                  {userStats.ordersCount}
+                </p>
+              </div>
+              <div className="rounded-2xl bg-slate-50 p-3">
+                <p className="text-[10px] uppercase tracking-[0.2em] text-slate-400">
+                  Часы
+                </p>
+                <p className="mt-2 font-semibold text-slate-900">
+                  {userStats.hoursWorked.toFixed(1)} ч
+                </p>
+              </div>
+              <div className="rounded-2xl bg-slate-50 p-3">
+                <p className="text-[10px] uppercase tracking-[0.2em] text-slate-400">
+                  Средн.
+                </p>
+                <p className="mt-2 font-semibold text-slate-900">
+                  {userStats.hoursWorked > 0
+                    ? `${Math.round(userStats.earnings / userStats.hoursWorked)} ${currency}/ч`
+                    : "—"}
+                </p>
+              </div>
+            </div>
+          </div>
+        </Card>
         {/* Info Section 
         {!leaderboardOptIn && (
           <Card className="mb-6 bg-amber-50 border border-amber-200">

@@ -102,47 +102,68 @@ export default function App() {
   // Wait for initialization before rendering
   if (!isInitialized) {
     return (
-      <div className="w-full h-full min-h-screen bg-white flex items-center justify-center p-4">
-        <div className="max-w-md w-full">
-          <div className="text-center space-y-6">
-            <div className="flex justify-center">
-              <div className="relative w-16 h-16">
-                <div className="absolute inset-0 rounded-full border-4 border-blue-200"></div>
+      <div className="w-full min-h-screen flex items-center justify-center bg-gradient-to-b from-slate-50 to-white p-4 pt-safe pb-safe">
+        <div className="max-w-lg w-full">
+          <div className="bg-white rounded-2xl shadow-xl border border-slate-100 p-6">
+            <div className="flex items-center gap-4">
+              <div className="w-14 h-14 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-600">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 24 24"
+                  className="w-8 h-8"
+                  fill="currentColor"
+                >
+                  <path d="M12 2a10 10 0 100 20 10 10 0 000-20zm1 14.5h-2v-2h2v2zm0-4.5h-2V6h2v6z" />
+                </svg>
+              </div>
+              <div>
+                <h2 className="text-2xl font-semibold text-slate-900">
+                  Courier Finance
+                </h2>
+                <p className="text-sm text-slate-500 mt-1">
+                  Мобильный кабинет курьера — рассчитывайте и сохраняйте смены
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-6 flex items-center justify-center">
+              <div className="relative w-20 h-20">
+                <div className="absolute inset-0 rounded-full border-4 border-slate-100"></div>
                 <div
-                  className="absolute inset-0 rounded-full border-4 border-transparent border-t-blue-600 border-r-blue-600"
-                  style={{
-                    animation: "spin 1s linear infinite",
-                  }}
-                ></div>
-                <style>{`
-                  @keyframes spin {
-                    to {
-                      transform: rotate(360deg);
-                    }
-                  }
-                `}</style>
+                  className="absolute inset-0 rounded-full border-4 border-transparent border-t-emerald-500 border-r-emerald-500"
+                  style={{ animation: "spin 1s linear infinite" }}
+                />
+                <style>{`@keyframes spin{to{transform:rotate(360deg);}}`}</style>
               </div>
             </div>
-            <div>
-              <h2 className="text-2xl font-semibold text-gray-900 mb-2">
-                Загрузка приложения
-              </h2>
-              <p className="text-sm text-gray-600">Пожалуйста, подождите...</p>
-            </div>
 
-            <div className="space-y-3 bg-blue-50 p-4 rounded-lg border border-blue-200">
-              <div className="flex items-start gap-3">
-                <p className="text-sm text-blue-900">
-                  <span className="font-semibold">Требуется Telegram:</span>{" "}
-                  приложение работает только внутри Telegram Mini App
+            <div className="mt-6 grid grid-cols-1 gap-3">
+              <div className="text-center">
+                <p className="text-sm text-slate-600">
+                  Подготовка данных, синхронизация профиля и смен...
                 </p>
+                <div className="mt-3 flex items-center justify-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-slate-300 animate-pulse" />
+                  <span className="w-2 h-2 rounded-full bg-slate-300 animate-pulse delay-75" />
+                  <span className="w-2 h-2 rounded-full bg-slate-300 animate-pulse delay-150" />
+                </div>
               </div>
 
-              <div className="flex items-start gap-3">
-                <p className="text-sm text-blue-900">
-                  <span className="font-semibold">Требуется VPN:</span>
-                  подключитесь к VPN для доступа
-                </p>
+              <div className="mt-4 p-3 rounded-lg bg-slate-50 border border-slate-100 text-sm text-slate-600">
+                <div className="flex items-start gap-3">
+                  <div className="flex-shrink-0 text-emerald-600">✔</div>
+                  <div>
+                    <div className="font-medium text-slate-900">Телеграм</div>
+                    <div className="text-xs text-slate-500">
+                      Проверка авторизации
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="text-xs text-center text-slate-400 mt-2">
+                Приложение работает внутри Telegram Mini App. Если загрузка
+                длится дольше минуты — перезапустите чат.
               </div>
             </div>
           </div>

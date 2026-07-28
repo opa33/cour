@@ -6,6 +6,10 @@ import {
   loadUserSettingsFromSupabase,
 } from "./supabase";
 import { getFirstName } from "./telegram";
+import {
+  saveUserSettingsToLocalStorage,
+  loadUserSettingsFromLocalStorage,
+} from "./localStorage";
 
 /**
  * Hook for syncing user settings between localStorage and Supabase
@@ -18,6 +22,8 @@ export const useUserSettingsSync = () => {
 
   // Sync to Supabase when settings change
   useEffect(() => {
+    saveUserSettingsToLocalStorage(settings);
+
     if (!isSupabaseConfigured()) return;
 
     // Debounce sync to avoid too many requests
@@ -50,6 +56,12 @@ export const useLoadUserSettingsFromSupabase = () => {
   const updateSettings = useUserStore((state: any) => state.updateSettings);
 
   const loadFromSupabase = async () => {
+    const localSettings = loadUserSettingsFromLocalStorage();
+    if (localSettings) {
+      updateSettings(localSettings);
+      console.log("📥 Loaded user settings from localStorage");
+    }
+
     if (!isSupabaseConfigured()) {
       console.log("📍 Supabase not configured");
       // Set Telegram first name as default username even without Supabase
