@@ -101,6 +101,9 @@ export default function ShiftCalculator() {
     type: "success" | "error" | "info";
     text: string;
   } | null>(null);
+  const [usingMainButton, setUsingMainButton] = useState(false);
+  const formVisible = !showResult;
+  const resultsVisible = showResult && !!calculationResult;
 
   // Check if we're editing based on currentShift date matching existing shift
   const isEditMode = useMemo(() => {
@@ -226,18 +229,20 @@ export default function ShiftCalculator() {
             off = onMainButtonClick(() => {
               handleSave();
             });
-          } catch (e) {
+            setUsingMainButton(true);
+          } catch {
             // ignore
           }
         } else {
           try {
             hideMainButton();
-          } catch (e) {
+            setUsingMainButton(false);
+          } catch {
             // ignore
           }
         }
       })
-      .catch((e) => {
+      .catch(() => {
         // dynamic import failed or not running inside Telegram
         // ignore silently
       });
@@ -246,7 +251,19 @@ export default function ShiftCalculator() {
       mounted = false;
       try {
         if (off) off();
-      } catch (e) {}
+        try {
+          // ensure Telegram button hidden when leaving
+          const mod = (window as any).Telegram?.WebApp?.MainButton;
+          if (mod) {
+            mod.hide?.();
+          }
+        } catch {
+          // Telegram WebApp is unavailable.
+        }
+        setUsingMainButton(false);
+      } catch {
+        // No active Telegram button listener to remove.
+      }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showResult, calculationResult, isEditMode]);
@@ -271,23 +288,42 @@ export default function ShiftCalculator() {
           </h1>
         </div>
 
-        {statusMessage && (
-          <div
-            className={`mb-6 rounded-3xl border px-4 py-3 text-sm font-medium ${
+        <div
+          className={`grid transition-[grid-template-rows,opacity,margin] duration-300 ease-out ${
+            statusMessage ? "grid-rows-[1fr] opacity-100 mb-6" : "grid-rows-[0fr] opacity-0 mb-0"
+          }`}
+          aria-live="polite"
+        >
+          <div className="overflow-hidden">
+            {statusMessage && (
+              <div
+                className={`flex items-start gap-3 rounded-xl border px-4 py-3 text-sm leading-5 ${
               statusMessage.type === "success"
                 ? "bg-emerald-50 border-emerald-200 text-emerald-900"
                 : statusMessage.type === "error"
                   ? "bg-rose-50 border-rose-200 text-rose-900"
                   : "bg-sky-50 border-sky-200 text-sky-900"
-            }`}
-          >
-            {statusMessage.text}
+                }`}
+              >
+                <span className="mt-0.5 text-base leading-none" aria-hidden="true">
+                  {statusMessage.type === "success" ? "✓" : statusMessage.type === "error" ? "!" : "i"}
+                </span>
+                <span>{statusMessage.text}</span>
+              </div>
+            )}
           </div>
-        )}
+        </div>
 
-        {/* Input Form Card - Hidden when showing results */}
-        {!showResult && (
-          <Card variant="elevated" className="mb-6">
+        {/* Keep both states mounted so the screen transforms instead of jumping. */}
+        <div
+          className={`overflow-hidden transition-[max-height,opacity,transform,margin] duration-300 ease-out ${
+            formVisible
+              ? "max-h-[1400px] opacity-100 translate-y-0 mb-6"
+              : "max-h-0 opacity-0 -translate-y-2 pointer-events-none mb-0"
+          }`}
+          aria-hidden={!formVisible}
+        >
+          <Card variant="elevated">
             <div className="space-y-4">
               {/* Date */}
               <div>
@@ -318,7 +354,6 @@ export default function ShiftCalculator() {
                 onChange={(minutes: number) =>
                   handleInputChange("minutes", minutes)
                 }
-                placeholder="8:30"
               />
 
               {/* Zone Orders */}
@@ -382,11 +417,25 @@ export default function ShiftCalculator() {
               </Button>
             </div>
           </Card>
-        )}
+        </div>
 
         {/* Results Section */}
-        {showResult && calculationResult && (
-          <>
+        <div
+          className={`overflow-hidden transition-[max-height,opacity,transform] duration-300 ease-out ${
+            resultsVisible
+              ? "max-h-[1800px] opacity-100 translate-y-0"
+              : "max-h-0 opacity-0 translate-y-2 pointer-events-none"
+          }`}
+          aria-hidden={!resultsVisible}
+        >
+          {calculationResult && (
+          <div className="pt-1">
+            {usingMainButton && (
+              <div className="mb-4 flex items-center gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
+                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-emerald-200 text-base leading-none" aria-hidden="true">↓</span>
+                <p>Сохраните смену системной кнопкой Telegram внизу экрана.</p>
+              </div>
+            )}
             {/* Income Stats - Minimalist Style */}
             <div className="space-y-2 mb-6">
               <div className="flex justify-left gap-2">
@@ -543,15 +592,17 @@ export default function ShiftCalculator() {
               </div>
             </Card>
 
-            {/* Save Button */}
-            <Button
-              onClick={handleSave}
-              isLoading={isSaving}
-              size="lg"
-              className="w-full mt-2"
-            >
-              {isEditMode ? "Обновить" : "Сохранить"}
-            </Button>
+            {/* Save Button (hidden when Telegram MainButton is used) */}
+            {!usingMainButton && (
+              <Button
+                onClick={handleSave}
+                isLoading={isSaving}
+                size="lg"
+                className="w-full mt-2"
+              >
+                {isEditMode ? "Обновить" : "Сохранить"}
+              </Button>
+            )}
 
             {/* Back/Cancel Button */}
             <Button
@@ -577,19 +628,10 @@ export default function ShiftCalculator() {
                 Отмена
               </Button>
             )}
-          </>
-        )}
-      </div>
-      {showResult && (
-        <div className="fixed right-4 bottom-24 z-50">
-          <div className="flex items-center gap-3 bg-emerald-600 text-white px-3 py-2 rounded-full shadow-lg animate-pulse-slow">
-            <div className="w-2 h-2 rounded-full bg-white/90" />
-            <div className="text-sm font-semibold">
-              Нажмите кнопку Telegram для сохранения
-            </div>
           </div>
+          )}
         </div>
-      )}
+      </div>
     </div>
   );
 }

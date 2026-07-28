@@ -85,7 +85,7 @@ export default function Tabs({ tabs, activeTab, onChange }: TabsProps) {
               flex flex-col items-center gap-2 border-t-2
               ${
                 activeTab === tab.id
-                  ? "text-slate-950 border-slate-950 bg-slate-100"
+                  ? "text-slate-950 border-slate-950"
                   : "text-slate-400 border-transparent hover:text-slate-600"
               }
             `}

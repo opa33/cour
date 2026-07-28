@@ -75,7 +75,7 @@ export const onMainButtonClick = (cb: () => void) => {
           if (w.Telegram.WebApp.MainButton.offClick) {
             w.Telegram.WebApp.MainButton.offClick(cb);
           }
-        } catch (e) {
+        } catch {
           // offClick may not exist
         }
       };

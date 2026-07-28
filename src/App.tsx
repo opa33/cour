@@ -102,7 +102,7 @@ export default function App() {
   // Wait for initialization before rendering
   if (!isInitialized) {
     return (
-      <div className="w-full min-h-screen flex items-center justify-center bg-gradient-to-b from-slate-50 to-white p-4 pt-safe pb-safe">
+      <div className="w-full min-h-screen flex items-center justify-center bg-gradient-to-b from-slate-50 to-white p-4 pt-6 pb-safe">
         <div className="max-w-lg w-full">
           <div className="bg-white rounded-2xl shadow-xl border border-slate-100 p-6">
             <div className="flex items-center gap-4">
